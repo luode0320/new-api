@@ -1,0 +1,149 @@
+# 此文件相当简单
+# 1. 检测到 main 分支有提交触发 jobs 任务，也支持手动触发
+# 2. 指定一个 GitHub 服务器的环境 ubuntu-latest
+# 3. 拉取当前代码到 GitHub 服务器
+# 4. 读取 jobs.docker.env 中的动态配置，在 GitHub 服务器制作镜像并保存为 tar 包
+# 5. 上传镜像 tar 包到远程服务器，停止旧容器、删除旧镜像、加载新镜像并启动新容器
+
+name: Build and Deploy new-api
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: docker-deploy-new-api
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_SLUG: new-api
+      IMAGE_NAMESPACE: luode0320
+      REMOTE_BASE_DIR: /usr/local/src
+      TARGET_OS: linux
+      TARGET_ARCH: amd64
+      # 留空时默认复用 PROJECT_SLUG；只有容器名想单独区分时才需要覆盖。
+      REMOTE_USER: root
+      REMOTE_PORT: 22
+      # 这里保留原始 docker run 参数写法，后续项目直接改这一段即可。
+      DOCKER_RUN_ARGS: |
+        -d \
+        --network host \
+        --restart=always \
+        --name ${PROJECT_SLUG} \
+        -e APP_ENV=prod \
+        -e TZ=Asia/Shanghai \
+        -e PORT=5566 \
+        -e 'SQL_DSN=root:Ld588588@tcp(127.0.0.1:33060)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
+        -e 'SESSION_SECRET=${{ secrets.SESSION_SECRET }}' \
+        -v /etc/hosts:/etc/hosts:ro \
+        -v ${REMOTE_BASE_DIR}/${PROJECT_SLUG}/data:/data \
+        -v ${REMOTE_BASE_DIR}/${PROJECT_SLUG}/logs:/app/logs
+      # 镜像名之后追加的容器命令（Dockerfile ENTRYPOINT /new-api 的参数）
+      DOCKER_RUN_CMD: --log-dir /app/logs
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-qemu-action@v3
+
+      - name: 打包镜像归档
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # 1. 以项目名为基准派生镜像名、tar 包名、builder 名和远程目录，减少重复前缀配置。
+          IMAGE="${IMAGE_NAMESPACE}/${PROJECT_SLUG}:latest"
+          IMAGE_TAR="${PROJECT_SLUG}.tar"
+          BUILDER_NAME="${PROJECT_SLUG}-builder"
+          APP_DIR="${REMOTE_BASE_DIR}/${PROJECT_SLUG}"
+
+          {
+            echo "IMAGE=${IMAGE}"
+            echo "IMAGE_TAR=${IMAGE_TAR}"
+            echo "BUILDER_NAME=${BUILDER_NAME}"
+            echo "APP_DIR=${APP_DIR}"
+          } >> "${GITHUB_ENV}"
+
+          # 2. buildx builder 名称由项目名派生，避免跨项目复用时残留固定命名。
+          docker buildx create --use --name "${BUILDER_NAME}"
+          docker buildx inspect --bootstrap
+          # 3. 镜像平台、镜像名和 tar 名都从项目派生结果中读取，确保构建参数可复用。
+          docker buildx build \
+            --platform "${TARGET_OS}/${TARGET_ARCH}" \
+            --output "type=docker,dest=${IMAGE_TAR}" \
+            -t "${IMAGE}" \
+            -f Dockerfile .
+
+      - name: 上传镜像归档
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ env.REMOTE_USER }}
+          password: ${{ secrets.REMOTE_PASSWORD }}
+          port: ${{ env.REMOTE_PORT }}
+          source: ${{ env.PROJECT_SLUG }}.tar
+          target: ${{ env.REMOTE_BASE_DIR }}/${{ env.PROJECT_SLUG }}
+
+      - name: 登录服务器并部署
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ env.REMOTE_USER }}
+          password: ${{ secrets.REMOTE_PASSWORD }}
+          port: ${{ env.REMOTE_PORT }}
+          script: |
+            # 1. 先按项目名派生镜像、tar 包和远程目录，确保相似前缀只维护一份。
+            set -euo pipefail
+            PROJECT_SLUG="${{ env.PROJECT_SLUG }}"
+            IMAGE_NAMESPACE="${{ env.IMAGE_NAMESPACE }}"
+            REMOTE_BASE_DIR="${{ env.REMOTE_BASE_DIR }}"
+            APP_DIR="${REMOTE_BASE_DIR}/${PROJECT_SLUG}"
+            IMAGE="${IMAGE_NAMESPACE}/${PROJECT_SLUG}:latest"
+            IMAGE_TAR="${PROJECT_SLUG}.tar"
+            CONTAINER="${{ env.PROJECT_SLUG }}"
+            if [ -z "${CONTAINER}" ]; then
+              CONTAINER="${PROJECT_SLUG}"
+            fi
+            DOCKER_RUN_ARGS=$(cat <<'EOF'
+            ${{ env.DOCKER_RUN_ARGS }}
+            EOF
+            )
+            DOCKER_RUN_CMD="${{ env.DOCKER_RUN_CMD }}"
+
+            # 必须配置固定 SESSION_SECRET，否则每次部署都是新随机值，会把所有用户登录会话全部踢下线。
+            if [ -z "${{ secrets.SESSION_SECRET }}" ]; then
+              echo "::error::SESSION_SECRET GitHub secret is not configured; refusing to deploy without it."
+              exit 1
+            fi
+
+            TAR_PATH="${APP_DIR}/${IMAGE_TAR}"
+
+            if [ ! -s "${TAR_PATH}" ]; then
+              echo "image archive not found: ${TAR_PATH}"
+              exit 1
+            fi
+
+            mkdir -p "${APP_DIR}/data" "${APP_DIR}/logs"
+
+            # 2. 删除旧镜像前先打印当前镜像 hash，方便和后续加载后的镜像做对比。
+            docker image inspect "${IMAGE}" --format 'before remove image id={{.Id}}' || true
+            docker rm -f "${CONTAINER}" || true
+            docker rmi "${IMAGE}" || true
+
+            # 3. 加载新镜像后立即打印当前标签对应的镜像 hash，确认远端已切到新内容。
+            docker load -i "${TAR_PATH}"
+            docker image inspect "${IMAGE}" --format 'after load image id={{.Id}}'
+
+            # 4. 这里允许在 env 中直接保留完整参数块写法，例如 -v/-e/--add-host/--entrypoint 等。
+            eval "docker run ${DOCKER_RUN_ARGS} \"${IMAGE}\" ${DOCKER_RUN_CMD}"
+            # 5. 立即校验容器状态，避免日志里只看到上传成功却没有发现新容器未对外提供服务。
+            docker ps --filter "name=^/${CONTAINER}$"
+            rm -f "${TAR_PATH}"

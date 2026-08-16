@@ -74,6 +74,7 @@ export interface RedemptionFormData {
   id?: number
   name: string
   quota: number
+  tier_money?: number
   expired_time: number
   count?: number // Only for create
   status?: number // Only for status update

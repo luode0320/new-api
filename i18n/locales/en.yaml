@@ -62,6 +62,7 @@ redemption.expired: "This redemption code has expired"
 redemption.failed: "Redemption failed, please try again later"
 redemption.not_provided: "Redemption code not provided"
 redemption.expire_time_invalid: "Expiration time cannot be earlier than current time"
+redemption.tier_invalid: "Invalid redemption tier, please use a configured tier"
 
 # User messages
 user.password_login_disabled: "Password login has been disabled by administrator"

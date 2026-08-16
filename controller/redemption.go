@@ -62,7 +62,7 @@ func GetRedemption(c *gin.Context) {
 }
 
 func AddRedemption(c *gin.Context) {
-	if !operation_setting.IsPaymentComplianceConfirmed() {
+	if !operation_setting.IsRedemptionEnabled() {
 		common.ApiErrorI18n(c, i18n.MsgPaymentComplianceRequired)
 		return
 	}
@@ -89,6 +89,17 @@ func AddRedemption(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": msg})
 		return
 	}
+
+	// 支持按面额档位生成：tier_money 与 quota 二选一。
+	// tier_money 必须命中已配置的档位，避免自由输入漂移。
+	if redemption.TierMoney != 0 {
+		if !operation_setting.IsConfiguredRedemptionTier(redemption.TierMoney) {
+			common.ApiErrorI18n(c, i18n.MsgRedemptionTierInvalid)
+			return
+		}
+		redemption.Quota = common.QuotaFromFloat(redemption.TierMoney * common.QuotaPerUnit)
+	}
+
 	var keys []string
 	for i := 0; i < redemption.Count; i++ {
 		key := common.GetUUID()

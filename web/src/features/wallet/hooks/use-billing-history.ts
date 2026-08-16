@@ -40,10 +40,12 @@ interface UseBillingHistoryOptions {
   initialPage?: number
   /** Initial page size */
   initialPageSize?: number
+  /** Whether the dialog is open; opening it refreshes the list */
+  open?: boolean
 }
 
 export function useBillingHistory(options: UseBillingHistoryOptions = {}) {
-  const { initialPage = 1, initialPageSize = 10 } = options
+  const { initialPage = 1, initialPageSize = 10, open = false } = options
   const isAdmin = useIsAdmin()
 
   const [records, setRecords] = useState<TopupRecord[]>([])
@@ -151,6 +153,16 @@ export function useBillingHistory(options: UseBillingHistoryOptions = {}) {
     setKeyword(newKeyword)
     setPage(1) // Reset to first page when searching
   }, [])
+
+  // Fetch the latest list every time the dialog opens so a freshly completed
+  // redemption/topup is visible immediately instead of stale cache.
+  const openedRef = useRef(open)
+  useEffect(() => {
+    if (!open || openedRef.current) return
+    openedRef.current = true
+    setPage(1)
+    fetchBillingHistory()
+  }, [open, fetchBillingHistory])
 
   // Fetch data after the search draft has settled.
   useEffect(() => {

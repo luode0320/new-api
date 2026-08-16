@@ -21,6 +21,7 @@ import { parseCurrencyDisplayType } from '@/lib/currency'
 import { CheckinSettingsSection } from '../general/checkin-settings-section'
 import { PricingSection } from '../general/pricing-section'
 import { QuotaSettingsSection } from '../general/quota-settings-section'
+import { RedemptionSettingsSection } from '../general/redemption-settings-section'
 import { PaymentSettingsSection } from '../integrations/payment-settings-section'
 import { RatioSettingsCard } from '../models/ratio-settings-card'
 import type { BillingSettings } from '../types'
@@ -197,6 +198,18 @@ const BILLING_SECTIONS = [
           enabled: settings['checkin_setting.enabled'],
           minQuota: settings['checkin_setting.min_quota'],
           maxQuota: settings['checkin_setting.max_quota'],
+        }}
+      />
+    ),
+  },
+  {
+    id: 'redemption',
+    titleKey: 'Redemption Settings',
+    build: (settings: BillingSettings) => (
+      <RedemptionSettingsSection
+        defaultValues={{
+          enabled: settings['redemption_setting.enable_redemption'],
+          tiers: settings['redemption_setting.redemption_tiers'],
         }}
       />
     ),

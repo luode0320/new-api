@@ -106,6 +106,8 @@ const defaultBillingSettings: BillingSettings = {
   'checkin_setting.enabled': false,
   'checkin_setting.min_quota': 1000,
   'checkin_setting.max_quota': 10000,
+  'redemption_setting.enable_redemption': true,
+  'redemption_setting.redemption_tiers': [5, 10, 20, 50, 100, 500],
 }
 
 export function BillingSettings() {

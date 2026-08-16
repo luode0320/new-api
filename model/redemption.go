@@ -21,6 +21,7 @@ type Redemption struct {
 	CreatedTime  int64          `json:"created_time" gorm:"bigint"`
 	RedeemedTime int64          `json:"redeemed_time" gorm:"bigint"`
 	Count        int            `json:"count" gorm:"-:all"` // only for api request
+	TierMoney    float64        `json:"tier_money" gorm:"-:all"` // only for api request: 面额档位（美元），与 Quota 二选一
 	UsedUserId   int            `json:"used_user_id"`
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 	ExpiredTime  int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
@@ -175,7 +176,27 @@ func Redeem(key string, userId int) (quota int, err error) {
 		if result.RowsAffected == 0 {
 			return errors.New("该兑换码已被使用")
 		}
-		return tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
+		// 复用充值链路的原子加额度（int32 上限保护），并发回调时也不会把余额推到上限外。
+		if err := creditTopUpQuota(tx, userId, redemption.Quota, nil); err != nil {
+			return err
+		}
+		// 写入一条充值账单，使兑换记录在充值历史/对账中可见。
+		// 必须用 tx.Create 写在同一事务内：用 DB 全局句柄会脱离事务，
+		// 破坏"加额度+写账单"的原子性（账单插入失败时加额度无法回滚）。
+		topUp := &TopUp{
+			UserId:          userId,
+			Amount:          int64(redemption.Quota),
+			TradeNo:         redemption.Key,
+			PaymentMethod:   PaymentMethodRedemption,
+			PaymentProvider: PaymentProviderRedemption,
+			CreateTime:      common.GetTimestamp(),
+			CompleteTime:    common.GetTimestamp(),
+			Status:          common.TopUpStatusSuccess,
+		}
+		if err := tx.Create(topUp).Error; err != nil {
+			return err
+		}
+		return nil
 	})
 	if err != nil {
 		common.SysError("redemption failed: " + err.Error())

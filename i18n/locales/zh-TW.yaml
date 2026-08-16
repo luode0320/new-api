@@ -63,6 +63,7 @@ redemption.expired: "該兌換碼已過期"
 redemption.failed: "兌換失敗，請稍後重試"
 redemption.not_provided: "未提供兌換碼"
 redemption.expire_time_invalid: "過期時間不能早於當前時間"
+redemption.tier_invalid: "無效的兌換碼面額檔位，請使用已設定的檔位"
 
 # User messages
 user.password_login_disabled: "管理員關閉了密碼登錄"

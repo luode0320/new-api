@@ -68,6 +68,7 @@ import {
   transformFormDataToPayload,
   transformRedemptionToFormDefaults,
 } from '../lib'
+import { useTopupInfo } from '@/features/wallet/hooks/use-topup-info'
 import type { Redemption } from '../types'
 import { useRedemptions } from './redemptions-provider'
 
@@ -86,6 +87,8 @@ export function RedemptionsMutateDrawer({
   const isUpdate = !!currentRow
   const redemptionId = currentRow?.id
   const { triggerRefresh } = useRedemptions()
+  const { topupInfo } = useTopupInfo()
+  const redemptionTiers = topupInfo?.redemption_tiers ?? []
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [redemptionLoadState, setRedemptionLoadState] = useState<
     'idle' | 'loading' | 'ready' | 'error'
@@ -285,6 +288,32 @@ export function RedemptionsMutateDrawer({
                     </FormItem>
                   )}
                 />
+
+                {!isUpdate && redemptionTiers.length > 0 && (
+                  <FormItem>
+                    <FormLabel>{t('Face-value tiers')}</FormLabel>
+                    <div className='grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2'>
+                      {redemptionTiers.map((tier) => (
+                        <Button
+                          key={tier}
+                          type='button'
+                          variant='outline'
+                          size='sm'
+                          onClick={() =>
+                            form.setValue('quota_dollars', tier, {
+                              shouldValidate: true,
+                            })
+                          }
+                        >
+                          {currencyLabel} {tier}
+                        </Button>
+                      ))}
+                    </div>
+                    <FormDescription>
+                      {t('Click a tier to fill the quota amount')}
+                    </FormDescription>
+                  </FormItem>
+                )}
 
                 <FormField
                   control={form.control}
