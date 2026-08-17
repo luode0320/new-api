@@ -1,0 +1,75 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: Debug (Go)",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "SESSION_SECRET": "vscode-dev-secret",
+        "SQLITE_PATH": "${workspaceFolder}\\dev-data\\new-api.db?_busy_timeout=30000",
+        "BATCH_UPDATE_ENABLED": "true",
+        "TZ": "Asia/Shanghai"
+      },
+      "preLaunchTask": "web: ensure dev dist",
+      "hideSystemGoroutines": true
+    },
+    {
+      "name": "Frontend: Dev Server (Rsbuild)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun install && bun run dev -- --host 0.0.0.0 --port 5173",
+      "cwd": "${workspaceFolder}\\web"
+    },
+    {
+      "name": "Backend (docker-compose.dev.yml)",
+      "type": "shell",
+      "request": "launch",
+      "command": "docker compose -f docker-compose.dev.yml up -d --build new-api",
+      "cwd": "${workspaceFolder}",
+      "presentation": {
+        "group": "docker",
+        "order": 1
+      }
+    },
+    {
+      "name": "PostgreSQL + Redis (docker, logs)",
+      "type": "shell",
+      "request": "launch",
+      "command": "docker compose -f docker-compose.dev.yml logs -f new-api redis postgres",
+      "cwd": "${workspaceFolder}",
+      "presentation": {
+        "group": "docker",
+        "order": 2
+      }
+    },
+    {
+      "name": "Attach to Go process",
+      "type": "go",
+      "request": "attach",
+      "mode": "local",
+      "processId": 0
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (Go + Rsbuild)",
+      "configurations": [
+        "Backend: Debug (Go)",
+        "Frontend: Dev Server (Rsbuild)"
+      ],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack (Docker + Rsbuild)",
+      "configurations": [
+        "Backend (docker-compose.dev.yml)",
+        "Frontend: Dev Server (Rsbuild)"
+      ],
+      "stopAll": true
+    }
+  ]
+}

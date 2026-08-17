@@ -509,3 +509,9 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 <sub>Built with ❤️ by QuantumNous</sub>
 
 </div>
+
+---
+
+## 改动日志
+
+2026-08-18 01:13:43 chore: [部署与开发配置] 新增 Redis 连接并整理 IDE 调试与忽略规则

@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "web: ensure dev dist",
+      "detail": "main.go embeds web/dist via go:embed; create a placeholder web/dist/index.html when missing so the backend compiles even without a frontend build.",
+      "type": "shell",
+      "windows": {
+        "command": "if not exist \"${workspaceFolder}\\web\\dist\" (mkdir \"${workspaceFolder}\\web\\dist\" & echo ^<html^>^<body^>use frontend dev server^</body^>^</html^> > \"${workspaceFolder}\\web\\dist\\index.html\")"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "web: dev server",
+      "detail": "Start the frontend dev server (Rsbuild) with /api, /mj, /pg proxied to the backend. Needs `bun` on PATH.",
+      "type": "shell",
+      "windows": {
+        "command": "cd ${workspaceFolder}\\web && bun install && bun run dev -- --host 0.0.0.0 --port 5173"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "rsbuild",
+        "pattern": {
+          "regexp": "$error"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting|Rsbuild|dev server|ready in|Compiled",
+          "endsPattern": "Local:|On Your Network|started server|ready"
+        }
+      }
+    }
+  ]
+}

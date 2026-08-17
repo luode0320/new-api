@@ -42,6 +42,7 @@ jobs:
         -e TZ=Asia/Shanghai \
         -e PORT=5566 \
         -e 'SQL_DSN=root:Ld588588@tcp(127.0.0.1:33060)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
+        -e 'REDIS_CONN_STRING=redis://:${{ secrets.REMOTE_PASSWORD }}@127.0.0.1:16379' \
         -e 'SESSION_SECRET=${{ secrets.SESSION_SECRET }}' \
         -v /etc/hosts:/etc/hosts:ro \
         -v ${REMOTE_BASE_DIR}/${PROJECT_SLUG}/data:/data \

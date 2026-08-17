@@ -1,5 +1,4 @@
 .idea
-.vscode
 .zed
 .history
 upload
@@ -41,3 +40,8 @@ service/relayconvert/chat_responses_live_local_test.go
 service/openaicompat/chat_responses_live_local_test.go
 go.work
 go.work.sum
+
+# ai
+.workbuddy/*
+.zcode/*
+.agnets/*
