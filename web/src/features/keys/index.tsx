@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useTranslation } from 'react-i18next'
 
+import { ApiInfoBanner } from '@/components/common/api-info'
 import { SectionPageLayout } from '@/components/layout'
 
 import { ApiKeysDialogs } from './components/api-keys-dialogs'
@@ -32,6 +33,7 @@ export function ApiKeys() {
       <SectionPageLayout fixedContent>
         <SectionPageLayout.Title>{t('API Keys')}</SectionPageLayout.Title>
         <SectionPageLayout.Actions>
+          <ApiInfoBanner className='max-w-sm xl:max-w-md' />
           <ApiKeysPrimaryButtons />
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
