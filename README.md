@@ -515,4 +515,4 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 ## 改动日志
 
 2026-08-18 01:13:43 chore: [部署与开发配置] 新增 Redis 连接并整理 IDE 调试与忽略规则
-2026-08-22 16:59:57 feat: [密钥管理] API Keys 页面新增 API 信息横幅
+2026-08-23 00:31:36 fix: [部署配置] 修正 SQLite DSN 参数为 _pragma 格式

@@ -34,6 +34,7 @@ jobs:
       REMOTE_PORT: 22
       # 这里保留原始 docker run 参数写法，后续项目直接改这一段即可。
       # SQLite 使用 WAL 与受控连接池，减少结算写入阻塞鉴权查询；切换到外部数据库时应移除这些 SQLite 参数。
+      # 注意：SQLITE_PATH 的查询参数必须用 _pragma=name(value) 格式（驱动为 glebarez pure-Go，mattn 风格的 _journal/_busy_timeout 等会被静默忽略）。
       # -e 'SQL_DSN=root:Ld588588@tcp(127.0.0.1:33060)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
       # -e 'REDIS_CONN_STRING=redis://:${{ secrets.REMOTE_PASSWORD }}@127.0.0.1:16379' \
       DOCKER_RUN_ARGS: |
@@ -45,11 +46,11 @@ jobs:
         -e TZ=Asia/Shanghai \
         -e PORT=5566 \
         -e 'SESSION_SECRET=${{ secrets.SESSION_SECRET }}' \
-        -e SQL_MAX_IDLE_CONNS=1 \
-        -e SQL_MAX_OPEN_CONNS=1 \
-        -e SQL_MAX_LIFETIME=60 \
+        -e SQL_MAX_IDLE_CONNS=4 \
+        -e SQL_MAX_OPEN_CONNS=8 \
+        -e SQL_MAX_LIFETIME=120 \
         -e BATCH_UPDATE_ENABLED=true \
-        -e 'SQLITE_PATH=/data/one-api.db?_pragma=journal_mode%28WAL%29&_pragma=busy_timeout%2810000%29' \
+        -e 'SQLITE_PATH=/data/one-api.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&_pragma=synchronous(NORMAL)&_pragma=cache_size(-30000)' \
         -v /etc/hosts:/etc/hosts:ro \
         -v ${REMOTE_BASE_DIR}/${PROJECT_SLUG}/data:/data \
         -v ${REMOTE_BASE_DIR}/${PROJECT_SLUG}/logs:/app/logs
