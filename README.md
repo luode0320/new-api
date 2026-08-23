@@ -516,3 +516,4 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 
 2026-08-18 01:13:43 chore: [部署与开发配置] 新增 Redis 连接并整理 IDE 调试与忽略规则
 2026-08-23 00:31:36 fix: [部署配置] 修正 SQLite DSN 参数为 _pragma 格式
+2026-08-23 14:25:58 feat: [错误日志] 部署配置启用 ERROR_LOG_ENABLED 开关

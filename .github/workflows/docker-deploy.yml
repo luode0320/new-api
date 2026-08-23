@@ -50,6 +50,7 @@ jobs:
         -e SQL_MAX_OPEN_CONNS=8 \
         -e SQL_MAX_LIFETIME=120 \
         -e BATCH_UPDATE_ENABLED=true \
+        -e ERROR_LOG_ENABLED=true \
         -e 'SQLITE_PATH=/data/one-api.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(10000)&_pragma=synchronous(NORMAL)&_pragma=cache_size(-30000)' \
         -v /etc/hosts:/etc/hosts:ro \
         -v ${REMOTE_BASE_DIR}/${PROJECT_SLUG}/data:/data \

@@ -10,6 +10,7 @@ After=network.target
 [Service]
 User=ubuntu  # 注意修改用户名
 WorkingDirectory=/path/to/new-api  # 注意修改路径
+Environment=ERROR_LOG_ENABLED=true  # 记录错误日志（type=5），否则默认关闭
 ExecStart=/path/to/new-api/new-api --port 3000 --log-dir /path/to/new-api/logs  # 注意修改路径和端口号
 Restart=always
 RestartSec=5
