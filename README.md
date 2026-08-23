@@ -520,3 +520,4 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 2026-08-23 21:13:53 feat: [错误日志] 新增使用记录统计面板与后端聚合统计
 2026-08-24 00:52:23 refactor: [使用统计] 统计分布迁移至数据看板并移除冗余聚合
 2026-08-24 01:28:20 refactor: [使用统计] 分布面板重写为饼图+表格并修复空 group 过滤
+2026-08-24 01:45:00 fix: [使用统计] 分布面板 locale 未转 BCP-47 导致 Invalid language tag: zhCN

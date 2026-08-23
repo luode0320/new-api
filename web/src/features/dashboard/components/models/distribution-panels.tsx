@@ -36,6 +36,7 @@ import { useThemeCustomization } from '@/context/theme-customization-provider'
 import { useTheme } from '@/context/theme-provider'
 import { getDashboardChartColors } from '@/features/dashboard/lib/charts'
 import type { UsageBreakdownItem } from '@/features/dashboard/types'
+import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
 import { useThemeRadiusPx } from '@/lib/theme-radius'
 import { VCHART_OPTION } from '@/lib/vchart'
@@ -124,7 +125,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     updateTheme()
   }, [resolvedTheme])
 
-  const locale = i18n.resolvedLanguage || i18n.language
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   const sortedItems = useMemo(() => {
     return [...props.items].sort(
       (a, b) => metricValue(b, metric) - metricValue(a, metric)
