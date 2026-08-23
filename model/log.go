@@ -709,6 +709,12 @@ func GetLogUsageBreakdown(startTimestamp int64, endTimestamp int64, modelName st
 
 	const breakdownSelect = "COUNT(*) AS count, COALESCE(SUM(quota), 0) AS quota, COALESCE(SUM(prompt_tokens), 0) AS input_tokens, COALESCE(SUM(completion_tokens), 0) AS output_tokens"
 
+	// 用 sentinel 把空字符串/NULL 的 group 归一化为 (ungrouped)，
+	// 避免空字符串造成饼图标签为空白，同时保持原有 group 非空数据的呈现。
+	// 前端负责把 __ungrouped__ 翻译为当前语言下的"未分组"。
+	const ungroupedSentinel = "__ungrouped__"
+	groupSelectExpr := "CASE WHEN " + logGroupCol + " = '' OR " + logGroupCol + " IS NULL THEN '" + ungroupedSentinel + "' ELSE " + logGroupCol + " END"
+
 	err = base.Session(&gorm.Session{}).
 		Select("model_name AS name, "+breakdownSelect).
 		Where("model_name <> ''").
@@ -721,9 +727,8 @@ func GetLogUsageBreakdown(startTimestamp int64, endTimestamp int64, modelName st
 	}
 
 	err = base.Session(&gorm.Session{}).
-		Select(logGroupCol+" AS name, "+breakdownSelect).
-		Where(logGroupCol+" <> ''").
-		Group(logGroupCol).
+		Select(groupSelectExpr+" AS name, "+breakdownSelect).
+		Group(groupSelectExpr).
 		Order("quota DESC").
 		Scan(&groupBreakdown).Error
 	if err != nil {
