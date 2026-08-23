@@ -247,12 +247,29 @@ export interface LogOtherData {
 }
 
 /**
+ * Usage breakdown item for model/group distribution
+ */
+export interface UsageBreakdownItem {
+  name: string
+  count: number
+  quota: number
+  input_tokens: number
+  output_tokens: number
+}
+
+/**
  * Log statistics data
  */
 export interface LogStatistics {
   quota: number
   rpm: number
   tpm: number
+  count: number
+  input_tokens: number
+  output_tokens: number
+  avg_use_time: number
+  model_breakdown: UsageBreakdownItem[]
+  group_breakdown: UsageBreakdownItem[]
 }
 
 // ============================================================================

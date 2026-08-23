@@ -671,6 +671,103 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	return stat, nil
 }
 
+// UsageBreakdownItem 表示按某个维度（模型/分组）聚合后的使用分布项。
+type UsageBreakdownItem struct {
+	Name         string `json:"name"`
+	Count        int    `json:"count"`
+	Quota        int    `json:"quota"`
+	InputTokens  int    `json:"input_tokens"`
+	OutputTokens int    `json:"output_tokens"`
+}
+
+// LogUsageStatistics 是"使用记录"页面的累计统计结果，全部由现有 logs 表聚合得出，
+// 不依赖任何额外的数据收集。缓存 token 因 Log 结构未拆分字段而不在范围内。
+type LogUsageStatistics struct {
+	Quota          int                  `json:"quota"`           // 总消费（quota 单位）
+	Count          int                  `json:"count"`           // 总请求数
+	InputTokens    int                  `json:"input_tokens"`    // 总输入 token
+	OutputTokens   int                  `json:"output_tokens"`   // 总输出 token
+	AvgUseTime     float64              `json:"avg_use_time"`    // 平均耗时（秒）
+	ModelBreakdown []UsageBreakdownItem `json:"model_breakdown"` // 模型分布
+	GroupBreakdown []UsageBreakdownItem `json:"group_breakdown"` // 分组使用分布
+}
+
+// GetLogUsageStatistics 聚合消费日志（type=LogTypeConsume）的累计统计与分布。
+// 平均耗时用 SUM(use_time)/COUNT(*) 在 Go 内计算，规避 AVG 在 MySQL/PG 返回
+// decimal/numeric 导致 Scan 到 float64 失败的跨库兼容问题。
+func GetLogUsageStatistics(startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string, channel int, group string) (stat LogUsageStatistics, err error) {
+	base := LOG_DB.Table("logs").Where("type = ?", LogTypeConsume)
+	if base, err = applyExplicitLogTextFilter(base, "model_name", modelName); err != nil {
+		return stat, err
+	}
+	if base, err = applyExplicitLogTextFilter(base, "username", username); err != nil {
+		return stat, err
+	}
+	if tokenName != "" {
+		base = base.Where("token_name = ?", tokenName)
+	}
+	if startTimestamp != 0 {
+		base = base.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		base = base.Where("created_at <= ?", endTimestamp)
+	}
+	if channel != 0 {
+		base = base.Where("channel_id = ?", channel)
+	}
+	if group != "" {
+		base = base.Where(logGroupCol+" = ?", group)
+	}
+
+	var summary struct {
+		Quota        int `gorm:"column:quota"`
+		Count        int `gorm:"column:count"`
+		InputTokens  int `gorm:"column:input_tokens"`
+		OutputTokens int `gorm:"column:output_tokens"`
+		SumUseTime   int `gorm:"column:sum_use_time"`
+	}
+	err = base.Session(&gorm.Session{}).
+		Select("COALESCE(SUM(quota), 0) AS quota, COUNT(*) AS count, COALESCE(SUM(prompt_tokens), 0) AS input_tokens, COALESCE(SUM(completion_tokens), 0) AS output_tokens, COALESCE(SUM(use_time), 0) AS sum_use_time").
+		Scan(&summary).Error
+	if err != nil {
+		common.SysError("failed to query log usage summary: " + err.Error())
+		return stat, errors.New("查询统计汇总失败")
+	}
+	stat.Quota = summary.Quota
+	stat.Count = summary.Count
+	stat.InputTokens = summary.InputTokens
+	stat.OutputTokens = summary.OutputTokens
+	if summary.Count > 0 {
+		stat.AvgUseTime = float64(summary.SumUseTime) / float64(summary.Count)
+	}
+
+	const breakdownSelect = "COUNT(*) AS count, COALESCE(SUM(quota), 0) AS quota, COALESCE(SUM(prompt_tokens), 0) AS input_tokens, COALESCE(SUM(completion_tokens), 0) AS output_tokens"
+
+	err = base.Session(&gorm.Session{}).
+		Select("model_name AS name, "+breakdownSelect).
+		Where("model_name <> ''").
+		Group("model_name").
+		Order("quota DESC").
+		Scan(&stat.ModelBreakdown).Error
+	if err != nil {
+		common.SysError("failed to query model usage breakdown: " + err.Error())
+		return stat, errors.New("查询模型分布失败")
+	}
+
+	err = base.Session(&gorm.Session{}).
+		Select(logGroupCol+" AS name, "+breakdownSelect).
+		Where(logGroupCol+" <> ''").
+		Group(logGroupCol).
+		Order("quota DESC").
+		Scan(&stat.GroupBreakdown).Error
+	if err != nil {
+		common.SysError("failed to query group usage breakdown: " + err.Error())
+		return stat, errors.New("查询分组分布失败")
+	}
+
+	return stat, nil
+}
+
 func SumUsedToken(logType int, startTimestamp int64, endTimestamp int64, modelName string, username string, tokenName string) (token int) {
 	tx := LOG_DB.Table("logs").Select("COALESCE(sum(prompt_tokens), 0) + COALESCE(sum(completion_tokens), 0)")
 	if username != "" {

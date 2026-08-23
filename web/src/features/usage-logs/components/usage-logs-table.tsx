@@ -41,6 +41,7 @@ import { parseLogOther } from '../lib/format'
 import { fetchLogsByCategory } from '../lib/utils'
 import type { LogCategory } from '../types'
 import { CommonLogsFilterBar } from './common-logs-filter-bar'
+import { CommonLogsStatsPanel } from './common-logs-stats-panel'
 import { TaskLogsFilterBar } from './task-logs-filter-bar'
 import { UsageLogsMobileList } from './usage-logs-mobile-card'
 import { useLogsViewScope } from './usage-logs-provider'
@@ -200,7 +201,10 @@ export function UsageLogsTable({ logCategory }: UsageLogsTableProps) {
       }
       toolbar={
         isCommon ? (
-          <CommonLogsFilterBar table={table} />
+          <>
+            <CommonLogsFilterBar table={table} />
+            <CommonLogsStatsPanel />
+          </>
         ) : (
           <TaskLogsFilterBar table={table} logCategory={logCategory} />
         )
