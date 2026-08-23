@@ -31,6 +31,7 @@ import {
 import type {
   QuotaDataItem,
   DashboardFilters,
+  UsageBreakdownItem,
 } from '@/features/dashboard/types'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatCompactNumber, formatNumber, formatQuota } from '@/lib/format'
@@ -40,7 +41,14 @@ import { useAuthStore } from '@/stores/auth-store'
 
 interface LogStatCardsProps {
   filters?: DashboardFilters
-  onDataUpdate?: (data: QuotaDataItem[], loading: boolean) => void
+  onDataUpdate?: (
+    data: QuotaDataItem[],
+    breakdown: {
+      model: UsageBreakdownItem[]
+      group: UsageBreakdownItem[]
+    },
+    loading: boolean
+  ) => void
 }
 
 const MAX_INLINE_STAT_CHARS = 9
@@ -81,7 +89,7 @@ export function LogStatCards(props: LogStatCardsProps) {
     setLoading(true)
 
     setError(false)
-    onDataUpdate?.([], true)
+    onDataUpdate?.([], { model: [], group: [] }, true)
 
     const timeRange = computeTimeRange(
       getDefaultDays(filters?.time_granularity),
@@ -96,13 +104,20 @@ export function LogStatCards(props: LogStatCardsProps) {
         if (abortController.signal.aborted) return
         const data = res?.data || []
         setStats(calculateDashboardStats(data))
-        onDataUpdate?.(data, false)
+        onDataUpdate?.(
+          data,
+          {
+            model: res?.model_breakdown ?? [],
+            group: res?.group_breakdown ?? [],
+          },
+          false
+        )
       })
       .catch(() => {
         if (abortController.signal.aborted) return
         setStats(null)
         setError(true)
-        onDataUpdate?.([], false)
+        onDataUpdate?.([], { model: [], group: [] }, false)
       })
       .finally(() => {
         if (!abortController.signal.aborted) {

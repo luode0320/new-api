@@ -109,24 +109,14 @@ func GetLogsStat(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	usage, err := model.GetLogUsageStatistics(startTimestamp, endTimestamp, modelName, username, tokenName, channel, group)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
+	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, "")
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
-			"quota":           usage.Quota,
-			"rpm":             stat.Rpm,
-			"tpm":             stat.Tpm,
-			"count":           usage.Count,
-			"input_tokens":    usage.InputTokens,
-			"output_tokens":   usage.OutputTokens,
-			"avg_use_time":    usage.AvgUseTime,
-			"model_breakdown": usage.ModelBreakdown,
-			"group_breakdown": usage.GroupBreakdown,
+			"quota": stat.Quota,
+			"rpm":   stat.Rpm,
+			"tpm":   stat.Tpm,
 		},
 	})
 	return
@@ -146,24 +136,15 @@ func GetLogsSelfStat(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	usage, err := model.GetLogUsageStatistics(startTimestamp, endTimestamp, modelName, username, tokenName, channel, group)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
+	//tokenNum := model.SumUsedToken(logType, startTimestamp, endTimestamp, modelName, username, tokenName)
 	c.JSON(200, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
-			"quota":           usage.Quota,
-			"rpm":             quotaNum.Rpm,
-			"tpm":             quotaNum.Tpm,
-			"count":           usage.Count,
-			"input_tokens":    usage.InputTokens,
-			"output_tokens":   usage.OutputTokens,
-			"avg_use_time":    usage.AvgUseTime,
-			"model_breakdown": usage.ModelBreakdown,
-			"group_breakdown": usage.GroupBreakdown,
+			"quota": quotaNum.Quota,
+			"rpm":   quotaNum.Rpm,
+			"tpm":   quotaNum.Tpm,
+			//"token": tokenNum,
 		},
 	})
 	return

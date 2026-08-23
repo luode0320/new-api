@@ -21,6 +21,7 @@ import { api } from '@/lib/api'
 import type {
   FlowQuotaDataItem,
   QuotaDataItem,
+  UsageBreakdownItem,
   UptimeGroupResult,
 } from './types'
 
@@ -34,6 +35,8 @@ import type {
 
 // Get user quota data within a time range
 // Admin users get all users' data by default.
+// The response body also carries model_breakdown / group_breakdown
+// (filled by controller/usedata.go) for the dashboard distribution panels.
 export async function getUserQuotaDates(
   params: {
     start_timestamp: number
@@ -44,10 +47,12 @@ export async function getUserQuotaDates(
   isAdmin = false
 ) {
   const endpoint = isAdmin ? '/api/data' : '/api/data/self'
-  const res = await api.get<{ success: boolean; data: QuotaDataItem[] }>(
-    endpoint,
-    { params }
-  )
+  const res = await api.get<{
+    success: boolean
+    data?: QuotaDataItem[]
+    model_breakdown?: UsageBreakdownItem[]
+    group_breakdown?: UsageBreakdownItem[]
+  }>(endpoint, { params })
   return res.data
 }
 

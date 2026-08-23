@@ -37,10 +37,13 @@ func GetAllQuotaDates(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	modelBreakdown, groupBreakdown, _ := model.GetLogUsageBreakdown(startTimestamp, endTimestamp, "", username, "", 0, "")
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    dates,
+		"success":         true,
+		"message":         "",
+		"data":            dates,
+		"model_breakdown": modelBreakdown,
+		"group_breakdown": groupBreakdown,
 	})
 	return
 }
@@ -62,6 +65,7 @@ func GetQuotaDatesByUser(c *gin.Context) {
 
 func GetUserQuotaDates(c *gin.Context) {
 	userId := c.GetInt("id")
+	username := c.GetString("username")
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	// 判断时间跨度是否超过 1 个月
@@ -77,10 +81,13 @@ func GetUserQuotaDates(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	modelBreakdown, groupBreakdown, _ := model.GetLogUsageBreakdown(startTimestamp, endTimestamp, "", username, "", 0, "")
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    dates,
+		"success":         true,
+		"message":         "",
+		"data":            dates,
+		"model_breakdown": modelBreakdown,
+		"group_breakdown": groupBreakdown,
 	})
 	return
 }

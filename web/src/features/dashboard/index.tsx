@@ -55,6 +55,7 @@ import type {
   DashboardChartPreferences,
   DashboardFilters,
   QuotaDataItem,
+  UsageBreakdownItem,
   UserChartsFilters,
 } from './types'
 
@@ -98,6 +99,12 @@ const LazyConsumptionDistributionChart = lazy(() =>
 const LazyPerformanceOverview = lazy(() =>
   import('./components/models/performance-overview').then((m) => ({
     default: m.PerformanceOverview,
+  }))
+)
+
+const LazyDistributionPanels = lazy(() =>
+  import('./components/models/distribution-panels').then((m) => ({
+    default: m.DistributionPanels,
   }))
 )
 
@@ -200,6 +207,8 @@ export function Dashboard() {
     DASHBOARD_DEFAULT_SECTION) as DashboardSectionId
 
   const [modelData, setModelData] = useState<QuotaDataItem[]>([])
+  const [modelBreakdown, setModelBreakdown] = useState<UsageBreakdownItem[]>([])
+  const [groupBreakdown, setGroupBreakdown] = useState<UsageBreakdownItem[]>([])
   const [dataLoading, setDataLoading] = useState(false)
   const [chartPreferences, setChartPreferences] =
     useState<DashboardChartPreferences>(() => getSavedChartPreferences())
@@ -227,8 +236,17 @@ export function Dashboard() {
   }, [chartPreferences])
 
   const handleDataUpdate = useCallback(
-    (data: QuotaDataItem[], loading: boolean) => {
+    (
+      data: QuotaDataItem[],
+      breakdown: {
+        model: UsageBreakdownItem[]
+        group: UsageBreakdownItem[]
+      },
+      loading: boolean
+    ) => {
       setModelData(data)
+      setModelBreakdown(breakdown.model)
+      setGroupBreakdown(breakdown.group)
       setDataLoading(loading)
     },
     []
@@ -362,6 +380,15 @@ export function Dashboard() {
                   </Suspense>
                 </FadeIn>
               )}
+              <FadeIn delay={0.08}>
+                <Suspense fallback={<ModelChartsFallback />}>
+                  <LazyDistributionPanels
+                    modelItems={modelBreakdown}
+                    groupItems={groupBreakdown}
+                    loading={dataLoading}
+                  />
+                </Suspense>
+              </FadeIn>
               <FadeIn delay={0.1}>
                 <Suspense fallback={<ModelChartsFallback />}>
                   <LazyConsumptionDistributionChart
