@@ -244,16 +244,16 @@ function BreakdownTable(props: BreakdownTableProps) {
       </colgroup>
       <TableHeader>
         <TableRow className='hover:bg-transparent'>
-          <TableHead className='text-muted-foreground h-7 px-1.5 font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top font-normal uppercase tracking-wide'>
             {t(props.nameColumnKey)}
           </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 text-right font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right font-normal uppercase tracking-wide'>
             {t('Requests')}
           </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 text-right font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right font-normal uppercase tracking-wide'>
             {t('Token')}
           </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 text-right font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right font-normal uppercase tracking-wide'>
             {t('Actual')}
           </TableHead>
         </TableRow>
@@ -267,13 +267,13 @@ function BreakdownTable(props: BreakdownTableProps) {
               <TableCell className='break-all px-1.5 py-1.5 align-top font-medium'>
                 {displayName(item.name, t)}
               </TableCell>
-              <TableCell className='px-1.5 py-1.5 text-right tabular-nums'>
+              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
                 {formatNumber(item.count, props.locale)}
               </TableCell>
-              <TableCell className='px-1.5 py-1.5 text-right tabular-nums'>
+              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
                 {formatTokens(tokens)}
               </TableCell>
-              <TableCell className='px-1.5 py-1.5 text-right tabular-nums'>
+              <TableCell className='px-1.5 py-1.5 align-top text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
                 {formatQuota(item.quota)}
               </TableCell>
             </TableRow>

@@ -522,3 +522,4 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 2026-08-24 01:28:20 refactor: [使用统计] 分布面板重写为饼图+表格并修复空 group 过滤
 2026-08-24 01:45:00 fix: [使用统计] 分布面板 locale 未转 BCP-47 导致 Invalid language tag: zhCN
 2026-08-24 21:58:54 refactor: [使用统计] 分布面板列宽调整并移除 Token/实际切换器
+2026-08-24 22:23:26 refactor: [使用统计] 分布面板统一顶部对齐并为实际列加绿色高亮
