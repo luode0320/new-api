@@ -219,7 +219,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
         </div>
       </div>
 
-      <div className='h-[320px] p-1.5 sm:h-96 sm:p-2'>{content}</div>
+      <div className='h-[400px] p-2 sm:h-[440px] sm:p-3'>{content}</div>
     </div>
   )
 }
@@ -235,7 +235,7 @@ function BreakdownTable(props: BreakdownTableProps) {
   const rows = props.items.slice(0, 8)
 
   return (
-    <Table className='h-full table-fixed text-xs'>
+    <Table className='h-full table-fixed text-sm'>
       <colgroup>
         <col className='w-[44%]' />
         <col className='w-[18%]' />
@@ -244,36 +244,36 @@ function BreakdownTable(props: BreakdownTableProps) {
       </colgroup>
       <TableHeader>
         <TableRow className='hover:bg-transparent'>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-10 px-2 align-top text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
             {t(props.nameColumnKey)}
           </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-10 px-2 align-top text-right text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
             {t('Requests')}
           </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-10 px-2 align-top text-right text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
             {t('Token')}
           </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right font-normal uppercase tracking-wide'>
+          <TableHead className='text-muted-foreground h-10 px-2 align-top text-right text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
             {t('Actual')}
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody className='[&>tr]:!h-12 divide-y divide-border/40'>
         {rows.map((item) => {
           const tokens =
             (item.input_tokens || 0) + (item.output_tokens || 0)
           return (
             <TableRow key={item.name} className='hover:bg-transparent'>
-              <TableCell className='break-all px-1.5 py-1.5 align-top font-medium'>
+              <TableCell className='break-all px-2 py-3 align-top font-medium'>
                 {displayName(item.name, t)}
               </TableCell>
-              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
+              <TableCell className='px-2 py-3 align-top text-right tabular-nums'>
                 {formatNumber(item.count, props.locale)}
               </TableCell>
-              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
+              <TableCell className='px-2 py-3 align-top text-right tabular-nums'>
                 {formatTokens(tokens)}
               </TableCell>
-              <TableCell className='px-1.5 py-1.5 align-top text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
+              <TableCell className='px-2 py-3 align-top text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
                 {formatQuota(item.quota)}
               </TableCell>
             </TableRow>
