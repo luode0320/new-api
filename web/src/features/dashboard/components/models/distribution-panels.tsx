@@ -166,7 +166,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
   let content: ReactNode
   if (props.loading) {
     content = (
-      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-[168px_minmax(0,1fr)]'>
+      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-[168px_240px] sm:justify-center'>
         <Skeleton className='h-40 w-full rounded-md' />
         <div className='space-y-2 p-1'>
           {(['tokens', 'quota'] as const).map((placeholder) => (
@@ -177,8 +177,8 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     )
   } else if (themeReady && hasData) {
     content = (
-      // 删除请求数列后放大环图，同时保留列表所需的三列展示空间。
-      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[168px_minmax(0,1fr)]'>
+      // 三列表格固定为紧凑宽度，避免删除请求数列后继续占满卡片空白。
+      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[168px_240px] sm:justify-center'>
         <div className='h-40 min-h-40'>
           <VChart
             key={chartKey}
@@ -229,9 +229,9 @@ interface BreakdownTableProps {
 }
 
 /**
- * [参数] 分布项、名称列翻译键和数字格式化区域设置。
+ * [参数] 分布项和名称列翻译键。
  * [返回] 包含名称、Token 和实际消费三列的紧凑表格节点。
- * 最近修改时间：2026-08-25 01:47:04，移除请求数列并将释放的横向空间让给左侧环图。
+ * 最近修改时间：2026-08-25 02:07:26，收窄删除请求数列后的三列表格，避免继续占满卡片空白。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
