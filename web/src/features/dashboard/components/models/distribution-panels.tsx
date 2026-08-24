@@ -60,6 +60,11 @@ interface BreakdownPanelProps {
   nameColumnKey: 'Model' | 'Group'
 }
 
+/**
+ * [参数] 分布面板标题、图标、分布数据和加载状态。
+ * [返回] 模型或分组分布面板节点。
+ * 最近修改时间：2026-08-25 00:02:06，按参考截图收紧环图与列表的横向比例及垂直留白。
+ */
 function BreakdownPanel(props: BreakdownPanelProps) {
   const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
@@ -174,8 +179,9 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     )
   } else if (themeReady && hasData) {
     content = (
-      <div className='grid grid-cols-1 items-start gap-2 sm:grid-cols-2'>
-        <div className='min-h-[180px]'>
+      // 参考使用记录的紧凑组合：固定窄图表列，将剩余空间留给四列表格。
+      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[140px_minmax(0,1fr)]'>
+        <div className='h-32 min-h-32'>
           <VChart
             key={chartKey}
             spec={{
@@ -215,7 +221,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
         </div>
       </div>
 
-      <div className='min-h-[260px] p-2 sm:p-3'>{content}</div>
+      <div className='p-2'>{content}</div>
     </div>
   )
 }
@@ -226,54 +232,59 @@ interface BreakdownTableProps {
   locale: Intl.LocalesArgument
 }
 
+/**
+ * [参数] 分布项、名称列翻译键和数字格式化区域设置。
+ * [返回] 包含名称、请求、Token 和实际消费四列的紧凑表格节点。
+ * 最近修改时间：2026-08-25 00:10:59，按参考截图收紧表格密度并保持原有字段不变。
+ */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
   const rows = props.items.slice(0, 8)
 
   return (
-    <div className='overflow-hidden rounded-md border'>
-      <Table className='table-fixed text-sm'>
+    <div className='overflow-hidden rounded-md border border-border/50'>
+      <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
         <colgroup>
-          <col className='w-[48%]' />
-          <col className='w-[17%]' />
-          <col className='w-[17%]' />
-          <col className='w-[18%]' />
+          <col className='w-[42%]' />
+          <col className='w-[19%]' />
+          <col className='w-[20%]' />
+          <col className='w-[19%]' />
         </colgroup>
         <TableHeader>
-          <TableRow className='hover:bg-transparent border-b border-border/60 bg-transparent'>
-            <TableHead className='text-muted-foreground h-10 px-3 align-middle text-sm font-semibold'>
+          <TableRow className='hover:bg-transparent border-b border-border/50 bg-transparent'>
+            <TableHead className='text-muted-foreground h-7 px-2 align-middle text-xs font-medium'>
               {t(props.nameColumnKey)}
             </TableHead>
-            <TableHead className='text-muted-foreground h-10 px-3 align-middle text-right text-sm font-semibold'>
+            <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Requests')}
             </TableHead>
-            <TableHead className='text-muted-foreground h-10 px-3 align-middle text-right text-sm font-semibold'>
+            <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Token')}
             </TableHead>
-            <TableHead className='text-muted-foreground h-10 px-3 align-middle text-right text-sm font-semibold'>
+            <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Actual')}
             </TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody className='[&>tr]:h-10'>
+        <TableBody className='[&>tr]:!h-7'>
           {rows.map((item) => {
             const tokens =
               (item.input_tokens || 0) + (item.output_tokens || 0)
             return (
               <TableRow
                 key={item.name}
-                className='hover:bg-muted/30 border-b border-border/40 transition-colors'
+                className='hover:bg-muted/30 border-b border-border/30 transition-colors'
               >
-                <TableCell className='max-w-0 truncate px-3 py-2.5 align-middle font-medium'>
+                <TableCell className='max-w-0 truncate px-2 py-1.5 align-middle font-medium'>
                   {displayName(item.name, t)}
                 </TableCell>
-                <TableCell className='px-3 py-2.5 align-middle text-right tabular-nums'>
+                <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
                   {formatNumber(item.count, props.locale)}
                 </TableCell>
-                <TableCell className='px-3 py-2.5 align-middle text-right tabular-nums'>
+                <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
                   {formatTokens(tokens)}
                 </TableCell>
-                <TableCell className='px-3 py-2.5 align-middle text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
+                <TableCell className='px-2 py-1.5 align-middle text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
                   {formatQuota(item.quota)}
                 </TableCell>
               </TableRow>
