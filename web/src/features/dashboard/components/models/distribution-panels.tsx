@@ -40,7 +40,6 @@ import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
 import { useThemeRadiusPx } from '@/lib/theme-radius'
 import { VCHART_OPTION } from '@/lib/vchart'
-import { cn } from '@/lib/utils'
 
 /**
  * 后端（model/log.go 的 GetLogUsageBreakdown）把空 group 归一为该 sentinel，
@@ -48,39 +47,12 @@ import { cn } from '@/lib/utils'
  */
 const UNGROUPED_SENTINEL = '__ungrouped__'
 
-type BreakdownMetric = 'tokens' | 'consumption'
-
-const METRIC_OPTIONS: ReadonlyArray<{
-  value: BreakdownMetric
-  labelKey: string
-}> = [
-  { value: 'tokens', labelKey: 'By tokens' },
-  { value: 'consumption', labelKey: 'By consumption' },
-]
-
 let themeManagerPromise: Promise<
   (typeof import('@visactor/vchart'))['ThemeManager']
 > | null = null
 
-function totalTokens(item: UsageBreakdownItem) {
-  return (item.input_tokens || 0) + (item.output_tokens || 0)
-}
-
-function metricValue(item: UsageBreakdownItem, metric: BreakdownMetric) {
-  return metric === 'tokens' ? totalTokens(item) : item.quota
-}
-
 function displayName(name: string, t: (k: string) => string) {
   return name === UNGROUPED_SENTINEL ? t('Ungrouped') : name
-}
-
-function formatMetricValue(
-  value: number,
-  metric: BreakdownMetric,
-  locale: Intl.LocalesArgument
-) {
-  if (metric === 'tokens') return formatTokens(value)
-  return formatNumber(value, locale)
 }
 
 interface BreakdownPanelProps {
@@ -100,7 +72,6 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     '--radius-md',
     `${customization.preset}:${customization.radius}`
   )
-  const [metric, setMetric] = useState<BreakdownMetric>('consumption')
   const [themeReady, setThemeReady] = useState(false)
   const themeManagerRef = useRef<
     (typeof import('@visactor/vchart'))['ThemeManager'] | null
@@ -126,16 +97,15 @@ function BreakdownPanel(props: BreakdownPanelProps) {
   }, [resolvedTheme])
 
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  // 表格按实际消耗（quota）倒序排，饼图与表格保持同一视觉口径。
   const sortedItems = useMemo(() => {
-    return [...props.items].sort(
-      (a, b) => metricValue(b, metric) - metricValue(a, metric)
-    )
-  }, [props.items, metric])
+    return [...props.items].sort((a, b) => (b.quota || 0) - (a.quota || 0))
+  }, [props.items])
 
   const pieSpec = useMemo<IPieChartSpec>(() => {
     const values = sortedItems.map((item) => ({
       type: displayName(item.name, t),
-      value: metricValue(item, metric) || 0,
+      value: item.quota || 0,
     }))
     const domain = values.map((v) => v.type)
     const range = getDashboardChartColors(domain.length)
@@ -174,9 +144,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
             {
               key: (datum?: Datum) => String((datum as { type?: string })?.type ?? ''),
               value: (datum?: Datum) =>
-                metric === 'tokens'
-                  ? formatTokens(Number((datum as { value?: number })?.value) || 0)
-                  : formatQuota(Number((datum as { value?: number })?.value) || 0),
+                formatQuota(Number((datum as { value?: number })?.value) || 0),
             },
           ],
         },
@@ -184,13 +152,12 @@ function BreakdownPanel(props: BreakdownPanelProps) {
       background: { fill: 'transparent' },
       animation: true,
     }
-  }, [sortedItems, chartRadius, metric, t])
+  }, [sortedItems, chartRadius, t])
 
   const Icon = props.icon
   const hasData = sortedItems.length > 0
   const chartKey = [
     props.title,
-    metric,
     props.loading ? 'loading' : 'ready',
     sortedItems.length,
     resolvedTheme,
@@ -225,7 +192,6 @@ function BreakdownPanel(props: BreakdownPanelProps) {
         </div>
         <BreakdownTable
           items={sortedItems}
-          metric={metric}
           nameColumnKey={props.nameColumnKey}
           locale={locale}
         />
@@ -248,23 +214,8 @@ function BreakdownPanel(props: BreakdownPanelProps) {
           </IconBadge>
           <div className='text-sm font-semibold'>{props.title}</div>
         </div>
-
-        <div className='bg-muted/60 inline-flex h-7 w-full overflow-x-auto rounded-lg border p-0.5 sm:h-8 sm:w-auto'>
-          {METRIC_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type='button'
-              onClick={() => setMetric(option.value)}
-              className={cn(
-                'inline-flex shrink-0 items-center rounded-md px-3 text-xs font-medium transition-colors',
-                metric === option.value
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t(option.labelKey)}
-            </button>
-          ))}
+        <div className='text-muted-foreground text-xs'>
+          {t('Sorted by actual consumption')}
         </div>
       </div>
 
@@ -275,7 +226,6 @@ function BreakdownPanel(props: BreakdownPanelProps) {
 
 interface BreakdownTableProps {
   items: UsageBreakdownItem[]
-  metric: BreakdownMetric
   nameColumnKey: 'Model' | 'Group'
   locale: Intl.LocalesArgument
 }
@@ -285,7 +235,13 @@ function BreakdownTable(props: BreakdownTableProps) {
   const rows = props.items.slice(0, 8)
 
   return (
-    <Table className='h-full text-xs'>
+    <Table className='h-full table-fixed text-xs'>
+      <colgroup>
+        <col className='w-[44%]' />
+        <col className='w-[18%]' />
+        <col className='w-[19%]' />
+        <col className='w-[19%]' />
+      </colgroup>
       <TableHeader>
         <TableRow className='hover:bg-transparent'>
           <TableHead className='text-muted-foreground h-7 px-1.5 font-normal uppercase tracking-wide'>
@@ -304,27 +260,21 @@ function BreakdownTable(props: BreakdownTableProps) {
       </TableHeader>
       <TableBody>
         {rows.map((item) => {
-          const tokens = totalTokens(item)
-          const isMetricRow = true
+          const tokens =
+            (item.input_tokens || 0) + (item.output_tokens || 0)
           return (
             <TableRow key={item.name} className='hover:bg-transparent'>
-              <TableCell
-                className={cn(
-                  'max-w-0 truncate px-1.5 py-1.5 font-medium',
-                  isMetricRow && 'text-foreground'
-                )}
-                title={displayName(item.name, t)}
-              >
+              <TableCell className='break-all px-1.5 py-1.5 align-top font-medium'>
                 {displayName(item.name, t)}
               </TableCell>
               <TableCell className='px-1.5 py-1.5 text-right tabular-nums'>
                 {formatNumber(item.count, props.locale)}
               </TableCell>
               <TableCell className='px-1.5 py-1.5 text-right tabular-nums'>
-                {formatMetricValue(tokens, 'tokens', props.locale)}
+                {formatTokens(tokens)}
               </TableCell>
               <TableCell className='px-1.5 py-1.5 text-right tabular-nums'>
-                {formatMetricValue(item.quota, 'consumption', props.locale)}
+                {formatQuota(item.quota)}
               </TableCell>
             </TableRow>
           )
