@@ -47,10 +47,6 @@ import { VCHART_OPTION } from '@/lib/vchart'
  */
 const UNGROUPED_SENTINEL = '__ungrouped__'
 
-let themeManagerPromise: Promise<
-  (typeof import('@visactor/vchart'))['ThemeManager']
-> | null = null
-
 function displayName(name: string, t: (k: string) => string) {
   return name === UNGROUPED_SENTINEL ? t('Ungrouped') : name
 }
@@ -178,7 +174,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     )
   } else if (themeReady && hasData) {
     content = (
-      <div className='grid h-full grid-cols-1 items-stretch gap-2 sm:grid-cols-2'>
+      <div className='grid grid-cols-1 items-start gap-2 sm:grid-cols-2'>
         <div className='min-h-[180px]'>
           <VChart
             key={chartKey}
@@ -219,7 +215,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
         </div>
       </div>
 
-      <div className='h-[400px] p-2 sm:h-[440px] sm:p-3'>{content}</div>
+      <div className='min-h-[260px] p-2 sm:p-3'>{content}</div>
     </div>
   )
 }
@@ -235,45 +231,45 @@ function BreakdownTable(props: BreakdownTableProps) {
   const rows = props.items.slice(0, 8)
 
   return (
-    <Table className='h-full table-fixed text-sm'>
+    <Table className='table-fixed text-xs'>
       <colgroup>
-        <col className='w-[44%]' />
+        <col className='w-[48%]' />
+        <col className='w-[17%]' />
+        <col className='w-[17%]' />
         <col className='w-[18%]' />
-        <col className='w-[19%]' />
-        <col className='w-[19%]' />
       </colgroup>
       <TableHeader>
         <TableRow className='hover:bg-transparent'>
-          <TableHead className='text-muted-foreground h-10 px-2 align-top text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-xs font-normal uppercase tracking-wide'>
             {t(props.nameColumnKey)}
           </TableHead>
-          <TableHead className='text-muted-foreground h-10 px-2 align-top text-right text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right text-xs font-normal uppercase tracking-wide'>
             {t('Requests')}
           </TableHead>
-          <TableHead className='text-muted-foreground h-10 px-2 align-top text-right text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right text-xs font-normal uppercase tracking-wide'>
             {t('Token')}
           </TableHead>
-          <TableHead className='text-muted-foreground h-10 px-2 align-top text-right text-[11px] font-semibold tracking-wider uppercase border-b border-border/60 bg-muted/30'>
+          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right text-xs font-normal uppercase tracking-wide'>
             {t('Actual')}
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody className='[&>tr]:!h-12 divide-y divide-border/40'>
+      <TableBody className='[&>tr]:h-auto'>
         {rows.map((item) => {
           const tokens =
             (item.input_tokens || 0) + (item.output_tokens || 0)
           return (
             <TableRow key={item.name} className='hover:bg-transparent'>
-              <TableCell className='break-all px-2 py-3 align-top font-medium'>
+              <TableCell className='break-all px-1.5 py-1.5 align-top font-medium'>
                 {displayName(item.name, t)}
               </TableCell>
-              <TableCell className='px-2 py-3 align-top text-right tabular-nums'>
+              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
                 {formatNumber(item.count, props.locale)}
               </TableCell>
-              <TableCell className='px-2 py-3 align-top text-right tabular-nums'>
+              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
                 {formatTokens(tokens)}
               </TableCell>
-              <TableCell className='px-2 py-3 align-top text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
+              <TableCell className='px-1.5 py-1.5 align-top text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
                 {formatQuota(item.quota)}
               </TableCell>
             </TableRow>
@@ -314,3 +310,7 @@ export function DistributionPanels(props: DistributionPanelsProps) {
     </div>
   )
 }
+
+let themeManagerPromise: Promise<
+  (typeof import('@visactor/vchart'))['ThemeManager']
+> | null = null
