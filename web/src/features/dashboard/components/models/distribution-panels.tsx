@@ -231,52 +231,54 @@ function BreakdownTable(props: BreakdownTableProps) {
   const rows = props.items.slice(0, 8)
 
   return (
-    <Table className='table-fixed text-xs'>
-      <colgroup>
-        <col className='w-[48%]' />
-        <col className='w-[17%]' />
-        <col className='w-[17%]' />
-        <col className='w-[18%]' />
-      </colgroup>
-      <TableHeader>
-        <TableRow className='hover:bg-transparent'>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-xs font-normal uppercase tracking-wide'>
-            {t(props.nameColumnKey)}
-          </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right text-xs font-normal uppercase tracking-wide'>
-            {t('Requests')}
-          </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right text-xs font-normal uppercase tracking-wide'>
-            {t('Token')}
-          </TableHead>
-          <TableHead className='text-muted-foreground h-7 px-1.5 align-top text-right text-xs font-normal uppercase tracking-wide'>
-            {t('Actual')}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody className='[&>tr]:h-auto'>
-        {rows.map((item) => {
-          const tokens =
-            (item.input_tokens || 0) + (item.output_tokens || 0)
-          return (
-            <TableRow key={item.name} className='hover:bg-transparent'>
-              <TableCell className='break-all px-1.5 py-1.5 align-top font-medium'>
-                {displayName(item.name, t)}
-              </TableCell>
-              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
-                {formatNumber(item.count, props.locale)}
-              </TableCell>
-              <TableCell className='px-1.5 py-1.5 align-top text-right tabular-nums'>
-                {formatTokens(tokens)}
-              </TableCell>
-              <TableCell className='px-1.5 py-1.5 align-top text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
-                {formatQuota(item.quota)}
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+    <div className='divide-y divide-border/50 overflow-hidden rounded-md border'>
+      <Table className='table-fixed text-[13px]'>
+        <colgroup>
+          <col className='w-[48%]' />
+          <col className='w-[17%]' />
+          <col className='w-[17%]' />
+          <col className='w-[18%]' />
+        </colgroup>
+        <TableHeader>
+          <TableRow className='hover:bg-transparent bg-muted/20'>
+            <TableHead className='text-muted-foreground h-9 px-2.5 align-middle text-[13px] font-semibold uppercase tracking-wide'>
+              {t(props.nameColumnKey)}
+            </TableHead>
+            <TableHead className='text-muted-foreground h-9 px-2.5 align-middle text-right text-[13px] font-semibold uppercase tracking-wide'>
+              {t('Requests')}
+            </TableHead>
+            <TableHead className='text-muted-foreground h-9 px-2.5 align-middle text-right text-[13px] font-semibold uppercase tracking-wide'>
+              {t('Token')}
+            </TableHead>
+            <TableHead className='text-muted-foreground h-9 px-2.5 align-middle text-right text-[13px] font-semibold uppercase tracking-wide'>
+              {t('Actual')}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className='[&>tr]:h-9'>
+          {rows.map((item) => {
+            const tokens =
+              (item.input_tokens || 0) + (item.output_tokens || 0)
+            return (
+              <TableRow key={item.name} className='hover:bg-muted/30 transition-colors'>
+                <TableCell className='max-w-0 truncate px-2.5 py-2 align-middle font-medium'>
+                  {displayName(item.name, t)}
+                </TableCell>
+                <TableCell className='px-2.5 py-2 align-middle text-right tabular-nums'>
+                  {formatNumber(item.count, props.locale)}
+                </TableCell>
+                <TableCell className='px-2.5 py-2 align-middle text-right tabular-nums'>
+                  {formatTokens(tokens)}
+                </TableCell>
+                <TableCell className='px-2.5 py-2 align-middle text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
+                  {formatQuota(item.quota)}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 
