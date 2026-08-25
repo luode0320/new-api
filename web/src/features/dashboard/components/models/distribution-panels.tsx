@@ -180,7 +180,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
   } else if (themeReady && hasData) {
     content = (
       // 参考使用记录的紧凑组合：固定窄图表列，将剩余空间留给四列表格。
-      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[140px_minmax(0,1fr)]'>
+      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[200px_minmax(0,1fr)]'>
         <div className='h-32 min-h-32'>
           <VChart
             key={chartKey}
@@ -245,7 +245,7 @@ function BreakdownTable(props: BreakdownTableProps) {
     <div className='overflow-hidden rounded-md border border-border/50'>
       <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
         <colgroup>
-          <col className='w-[42%]' />
+          <col className='w-[25%]' />
           <col className='w-[19%]' />
           <col className='w-[20%]' />
           <col className='w-[19%]' />
