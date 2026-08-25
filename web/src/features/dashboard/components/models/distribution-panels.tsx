@@ -16,9 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { Datum, IPieChartSpec } from '@visactor/vchart'
 import { Boxes, Layers } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
@@ -31,13 +30,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useThemeCustomization } from '@/context/theme-customization-provider'
-import { useTheme } from '@/context/theme-provider'
-import { getDashboardChartColors } from '@/features/dashboard/lib/charts'
 import type { UsageBreakdownItem } from '@/features/dashboard/types'
 import { toIntlLocale } from '@/i18n/languages'
-import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
-import { useThemeRadiusPx } from '@/lib/theme-radius'
+import {
+  formatNumber,
+  formatQuota,
+  formatTokens,
+  quotaUnitsToDollars,
+} from '@/lib/format'
 
 /**
  * 后端（model/log.go 的 GetLogUsageBreakdown）把空 group 归一为该 sentinel，
@@ -61,113 +61,23 @@ interface BreakdownPanelProps {
 /**
  * [参数] 分布面板标题、图标、分布数据和加载状态。
  * [返回] 模型或分组分布面板节点。
- * 最近修改时间：2026-08-25 00:02:06，按参考截图收紧环图与列表的横向比例及垂直留白。
+ * 最近修改时间：2026-08-26 01:58:23，移除环图仅保留分布表格，避免图表与列表并存导致的横向空间冲突。
  */
 function BreakdownPanel(props: BreakdownPanelProps) {
   const { t, i18n } = useTranslation()
-  const { resolvedTheme } = useTheme()
-  const { customization } = useThemeCustomization()
-  const chartRadius = useThemeRadiusPx(
-    '--radius-md',
-    `${customization.preset}:${customization.radius}`
-  )
-  const [themeReady, setThemeReady] = useState(false)
-  const themeManagerRef = useRef<
-    (typeof import('@visactor/vchart'))['ThemeManager'] | null
-  >(null)
-
-  useEffect(() => {
-    const updateTheme = async () => {
-      setThemeReady(false)
-
-      if (!themeManagerPromise) {
-        themeManagerPromise = import('@visactor/vchart').then(
-          (m) => m.ThemeManager
-        )
-      }
-
-      const ThemeManager = await themeManagerPromise
-      themeManagerRef.current = ThemeManager
-      ThemeManager.setCurrentTheme(resolvedTheme === 'dark' ? 'dark' : 'light')
-      setThemeReady(true)
-    }
-
-    updateTheme()
-  }, [resolvedTheme])
-
   const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
-  // 表格按实际消耗（quota）倒序排，饼图与表格保持同一视觉口径。
+  // 表格按实际消耗（quota）倒序排，与面板排序口径保持一致。
   const sortedItems = useMemo(() => {
     return [...props.items].sort((a, b) => (b.quota || 0) - (a.quota || 0))
   }, [props.items])
 
-  const pieSpec = useMemo<IPieChartSpec>(() => {
-    const values = sortedItems.map((item) => ({
-      type: displayName(item.name, t),
-      value: item.quota || 0,
-    }))
-    const domain = values.map((v) => v.type)
-    const range = getDashboardChartColors(domain.length)
-
-    return {
-      type: 'pie',
-      data: [{ id: 'distribution', values }],
-      outerRadius: 0.78,
-      innerRadius: 0.5,
-      padAngle: 0.6,
-      valueField: 'value',
-      categoryField: 'type',
-      pie: {
-        style: chartRadius == null ? {} : { cornerRadius: chartRadius },
-        state: {
-          hover: { outerRadius: 0.82, stroke: '#000', lineWidth: 1 },
-          selected: { outerRadius: 0.82, stroke: '#000', lineWidth: 1 },
-        },
-      },
-      title: { visible: false },
-      legends: { visible: false },
-      label: {
-        visible: true,
-        formatMethod: (text: unknown, datum?: Datum) => {
-          const data = datum as { type?: string } | undefined
-          return data?.type ?? String(text ?? '')
-        },
-        style: {
-          fontSize: 11,
-        },
-      },
-      color: { type: 'ordinal', domain, range },
-      tooltip: {
-        mark: {
-          content: [
-            {
-              key: (datum?: Datum) => String((datum as { type?: string })?.type ?? ''),
-              value: (datum?: Datum) =>
-                formatQuota(Number((datum as { value?: number })?.value) || 0),
-            },
-          ],
-        },
-      },
-      background: { fill: 'transparent' },
-      animation: true,
-    }
-  }, [sortedItems, chartRadius, t])
-
   const Icon = props.icon
   const hasData = sortedItems.length > 0
-  const chartKey = [
-    props.title,
-    props.loading ? 'loading' : 'ready',
-    sortedItems.length,
-    resolvedTheme,
-    customization.preset,
-  ].join('-')
 
   let content: ReactNode
   if (props.loading) {
     content = (
-      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-2'>
-        <Skeleton className='h-full w-full rounded-md' />
+      <div className='grid h-full grid-cols-1 gap-2'>
         <div className='space-y-2 p-1'>
           {(['tokens', 'quota', 'requests'] as const).map((placeholder) => (
             <Skeleton key={`skeleton-${placeholder}`} className='h-8 w-full' />
@@ -175,16 +85,13 @@ function BreakdownPanel(props: BreakdownPanelProps) {
         </div>
       </div>
     )
-  } else if (themeReady && hasData) {
+  } else if (hasData) {
     content = (
-      // 参考使用记录的紧凑组合：固定窄图表列，将剩余空间留给四列表格。
-      <div className='grid grid-cols-1 items-center gap-2'>
-        <BreakdownTable
-          items={sortedItems}
-          nameColumnKey={props.nameColumnKey}
-          locale={locale}
-        />
-      </div>
+      <BreakdownTable
+        items={sortedItems}
+        nameColumnKey={props.nameColumnKey}
+        locale={locale}
+      />
     )
   } else {
     content = (
@@ -221,8 +128,8 @@ interface BreakdownTableProps {
 
 /**
  * [参数] 分布项、名称列翻译键和数字格式化区域设置。
- * [返回] 包含名称、请求、Token 和实际消费四列的紧凑表格节点。
- * 最近修改时间：2026-08-25 00:10:59，按参考截图收紧表格密度并保持原有字段不变。
+ * [返回] 包含名称、请求、Token、单币 Token 数量和实际消费五列的紧凑表格节点。
+ * 最近修改时间：2026-08-26 01:46:57，新增"1元 Token"列展示每 1 单位货币可用的 Token 数（tokens / displayAmount），公式对 USD/CNY/自定义币种一致。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
@@ -232,10 +139,11 @@ function BreakdownTable(props: BreakdownTableProps) {
     <div className='overflow-hidden rounded-md border border-border/50'>
       <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
         <colgroup>
-          <col className='w-[25%]' />
-          <col className='w-[19%]' />
           <col className='w-[20%]' />
-          <col className='w-[19%]' />
+          <col className='w-[17%]' />
+          <col className='w-[17%]' />
+          <col className='w-[17%]' />
+          <col className='w-[17%]' />
         </colgroup>
         <TableHeader>
           <TableRow className='hover:bg-transparent border-b border-border/50 bg-transparent'>
@@ -248,6 +156,12 @@ function BreakdownTable(props: BreakdownTableProps) {
             <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Token')}
             </TableHead>
+            <TableHead
+              title={t('Tokens consumed per 1 unit of actual cost')}
+              className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'
+            >
+              {t('Per $1')}
+            </TableHead>
             <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Actual')}
             </TableHead>
@@ -257,6 +171,9 @@ function BreakdownTable(props: BreakdownTableProps) {
           {rows.map((item) => {
             const tokens =
               (item.input_tokens || 0) + (item.output_tokens || 0)
+            // 单币 Token 数 = 总 token / 显示金额（USD/CNY/自定义币种由 quotaUnitsToDollars 统一换算）
+            const displayAmount = quotaUnitsToDollars(item.quota || 0)
+            const tokensPerUnit = displayAmount > 0 ? tokens / displayAmount : 0
             return (
               <TableRow
                 key={item.name}
@@ -270,6 +187,12 @@ function BreakdownTable(props: BreakdownTableProps) {
                 </TableCell>
                 <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
                   {formatTokens(tokens)}
+                </TableCell>
+                <TableCell
+                  title={`${formatNumber(tokens, props.locale)} / ${formatQuota(item.quota)}`}
+                  className='px-2 py-1.5 align-middle text-right tabular-nums'
+                >
+                  {formatTokens(tokensPerUnit)}
                 </TableCell>
                 <TableCell className='px-2 py-1.5 align-middle text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
                   {formatQuota(item.quota)}
@@ -313,7 +236,3 @@ export function DistributionPanels(props: DistributionPanelsProps) {
     </div>
   )
 }
-
-let themeManagerPromise: Promise<
-  (typeof import('@visactor/vchart'))['ThemeManager']
-> | null = null
