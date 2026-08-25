@@ -231,7 +231,7 @@ interface BreakdownTableProps {
 /**
  * [参数] 分布项和名称列翻译键。
  * [返回] 包含名称、Token 和实际消费三列的紧凑表格节点。
- * 最近修改时间：2026-08-25 22:40:16，将名称列收窄一半以增加数值列阅读空间。
+ * 最近修改时间：2026-08-25 23:41:33，将名称列再收窄一半以减少列表占用宽度。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
@@ -240,11 +240,11 @@ function BreakdownTable(props: BreakdownTableProps) {
   return (
     <div className='overflow-hidden rounded-md border border-border/50'>
       <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
-        {/* 名称列减少一半，释放的宽度均分给两个右对齐数值列。 */}
+        {/* 名称列再减少一半，释放的宽度均分给两个右对齐数值列。 */}
         <colgroup>
-          <col className='w-[25%]' />
-          <col className='w-[37.5%]' />
-          <col className='w-[37.5%]' />
+          <col className='w-[12.5%]' />
+          <col className='w-[43.75%]' />
+          <col className='w-[43.75%]' />
         </colgroup>
         <TableHeader>
           <TableRow className='hover:bg-transparent border-b border-border/50 bg-transparent'>
