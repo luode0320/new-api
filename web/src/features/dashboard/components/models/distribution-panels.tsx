@@ -16,7 +16,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { VChart } from '@visactor/react-vchart'
 import type { Datum, IPieChartSpec } from '@visactor/vchart'
 import { Boxes, Layers } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -39,7 +38,6 @@ import type { UsageBreakdownItem } from '@/features/dashboard/types'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
 import { useThemeRadiusPx } from '@/lib/theme-radius'
-import { VCHART_OPTION } from '@/lib/vchart'
 
 /**
  * 后端（model/log.go 的 GetLogUsageBreakdown）把空 group 归一为该 sentinel，
@@ -180,18 +178,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
   } else if (themeReady && hasData) {
     content = (
       // 参考使用记录的紧凑组合：固定窄图表列，将剩余空间留给四列表格。
-      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[200px_minmax(0,1fr)]'>
-        <div className='h-32 min-h-32'>
-          <VChart
-            key={chartKey}
-            spec={{
-              ...pieSpec,
-              theme: resolvedTheme === 'dark' ? 'dark' : 'light',
-              background: 'transparent',
-            }}
-            option={VCHART_OPTION}
-          />
-        </div>
+      <div className='grid grid-cols-1 items-center gap-2'>
         <BreakdownTable
           items={sortedItems}
           nameColumnKey={props.nameColumnKey}
