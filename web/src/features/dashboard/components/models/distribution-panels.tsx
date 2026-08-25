@@ -229,9 +229,9 @@ interface BreakdownTableProps {
 }
 
 /**
- * [参数] 分布项、名称列翻译键和数字格式化区域设置。
+ * [参数] 分布项和名称列翻译键。
  * [返回] 包含名称、Token 和实际消费三列的紧凑表格节点。
- * 最近修改时间：2026-08-25 01:47:04，移除请求数列并将释放的横向空间让给左侧环图。
+ * 最近修改时间：2026-08-25 22:40:16，将名称列收窄一半以增加数值列阅读空间。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
@@ -240,10 +240,11 @@ function BreakdownTable(props: BreakdownTableProps) {
   return (
     <div className='overflow-hidden rounded-md border border-border/50'>
       <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
+        {/* 名称列减少一半，释放的宽度均分给两个右对齐数值列。 */}
         <colgroup>
-          <col className='w-[50%]' />
           <col className='w-[25%]' />
-          <col className='w-[25%]' />
+          <col className='w-[37.5%]' />
+          <col className='w-[37.5%]' />
         </colgroup>
         <TableHeader>
           <TableRow className='hover:bg-transparent border-b border-border/50 bg-transparent'>
