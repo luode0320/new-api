@@ -62,7 +62,7 @@ interface BreakdownPanelProps {
 /**
  * [参数] 分布面板标题、图标、分布数据和加载状态。
  * [返回] 模型或分组分布面板节点。
- * 最近修改时间：2026-08-25 01:47:04，移除请求数列并放大左侧环图。
+ * 最近修改时间：2026-08-25 21:56:19，修正三列表格贴右后左侧环图居中定位。
  */
 function BreakdownPanel(props: BreakdownPanelProps) {
   const { t } = useTranslation()
@@ -96,7 +96,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     updateTheme()
   }, [resolvedTheme])
 
-  // 表格按实际消耗（quota）倒序排，饼图与表格保持同一视觉口径。
+  // 1. 表格按实际消耗（quota）倒序排，饼图与表格保持同一视觉口径。
   const sortedItems = useMemo(() => {
     return [...props.items].sort((a, b) => (b.quota || 0) - (a.quota || 0))
   }, [props.items])
@@ -163,12 +163,15 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     customization.preset,
   ].join('-')
 
+  // 2. 左侧弹性区域只负责居中图表，右侧固定宽度列表始终贴近卡片右边。
   let content: ReactNode
   if (props.loading) {
     content = (
-      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-[168px_240px] sm:justify-center'>
-        <Skeleton className='h-40 w-full rounded-md' />
-        <div className='space-y-2 p-1'>
+      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_280px]'>
+        <div className='flex h-40 min-w-0 items-center justify-center'>
+          <Skeleton className='h-40 w-42 rounded-md' />
+        </div>
+        <div className='w-full space-y-2 p-1 sm:justify-self-end'>
           {(['tokens', 'quota'] as const).map((placeholder) => (
             <Skeleton key={`skeleton-${placeholder}`} className='h-8 w-full' />
           ))}
@@ -177,23 +180,26 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     )
   } else if (themeReady && hasData) {
     content = (
-      // 三列表格固定为紧凑宽度，避免删除请求数列后继续占满卡片空白。
-      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[168px_240px] sm:justify-center'>
-        <div className='h-40 min-h-40'>
-          <VChart
-            key={chartKey}
-            spec={{
-              ...pieSpec,
-              theme: resolvedTheme === 'dark' ? 'dark' : 'light',
-              background: 'transparent',
-            }}
-            option={VCHART_OPTION}
+      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_280px]'>
+        <div className='flex h-40 min-h-40 min-w-0 items-center justify-center'>
+          <div className='h-40 w-42'>
+            <VChart
+              key={chartKey}
+              spec={{
+                ...pieSpec,
+                theme: resolvedTheme === 'dark' ? 'dark' : 'light',
+                background: 'transparent',
+              }}
+              option={VCHART_OPTION}
+            />
+          </div>
+        </div>
+        <div className='w-full sm:justify-self-end'>
+          <BreakdownTable
+            items={sortedItems}
+            nameColumnKey={props.nameColumnKey}
           />
         </div>
-        <BreakdownTable
-          items={sortedItems}
-          nameColumnKey={props.nameColumnKey}
-        />
       </div>
     )
   } else {
@@ -231,7 +237,7 @@ interface BreakdownTableProps {
 /**
  * [参数] 分布项和名称列翻译键。
  * [返回] 包含名称、Token 和实际消费三列的紧凑表格节点。
- * 最近修改时间：2026-08-25 02:07:26，收窄删除请求数列后的三列表格，避免继续占满卡片空白。
+ * 最近修改时间：2026-08-25 21:49:32，配合右侧固定定位保留三列可扫描宽度。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
