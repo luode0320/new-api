@@ -16,13 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import type { Datum, IPieChartSpec } from '@visactor/vchart'
 import { VChart } from '@visactor/react-vchart'
+import type { Datum, IPieChartSpec } from '@visactor/vchart'
 import { Boxes, Layers } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -31,12 +32,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useThemeCustomization } from '@/context/theme-customization-provider'
 import { useTheme } from '@/context/theme-provider'
 import { getDashboardChartColors } from '@/features/dashboard/lib/charts'
 import type { UsageBreakdownItem } from '@/features/dashboard/types'
-import { formatQuota, formatTokens } from '@/lib/format'
+import { toIntlLocale } from '@/i18n/languages'
+import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
 import { useThemeRadiusPx } from '@/lib/theme-radius'
 import { VCHART_OPTION } from '@/lib/vchart'
 
@@ -62,10 +63,10 @@ interface BreakdownPanelProps {
 /**
  * [参数] 分布面板标题、图标、分布数据和加载状态。
  * [返回] 模型或分组分布面板节点。
- * 最近修改时间：2026-08-25 01:47:04，移除请求数列并放大左侧环图。
+ * 最近修改时间：2026-08-25 00:02:06，按参考截图收紧环图与列表的横向比例及垂直留白。
  */
 function BreakdownPanel(props: BreakdownPanelProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
   const { customization } = useThemeCustomization()
   const chartRadius = useThemeRadiusPx(
@@ -96,6 +97,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     updateTheme()
   }, [resolvedTheme])
 
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
   // 表格按实际消耗（quota）倒序排，饼图与表格保持同一视觉口径。
   const sortedItems = useMemo(() => {
     return [...props.items].sort((a, b) => (b.quota || 0) - (a.quota || 0))
@@ -166,10 +168,10 @@ function BreakdownPanel(props: BreakdownPanelProps) {
   let content: ReactNode
   if (props.loading) {
     content = (
-      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-[168px_minmax(0,1fr)]'>
-        <Skeleton className='h-40 w-full rounded-md' />
+      <div className='grid h-full grid-cols-1 gap-2 sm:grid-cols-2'>
+        <Skeleton className='h-full w-full rounded-md' />
         <div className='space-y-2 p-1'>
-          {(['tokens', 'quota'] as const).map((placeholder) => (
+          {(['tokens', 'quota', 'requests'] as const).map((placeholder) => (
             <Skeleton key={`skeleton-${placeholder}`} className='h-8 w-full' />
           ))}
         </div>
@@ -177,9 +179,9 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     )
   } else if (themeReady && hasData) {
     content = (
-      // 删除请求数列后放大环图，同时保留列表所需的三列展示空间。
-      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[168px_minmax(0,1fr)]'>
-        <div className='h-40 min-h-40'>
+      // 参考使用记录的紧凑组合：固定窄图表列，将剩余空间留给四列表格。
+      <div className='grid grid-cols-1 items-center gap-2 sm:grid-cols-[140px_minmax(0,1fr)]'>
+        <div className='h-32 min-h-32'>
           <VChart
             key={chartKey}
             spec={{
@@ -193,6 +195,7 @@ function BreakdownPanel(props: BreakdownPanelProps) {
         <BreakdownTable
           items={sortedItems}
           nameColumnKey={props.nameColumnKey}
+          locale={locale}
         />
       </div>
     )
@@ -226,12 +229,13 @@ function BreakdownPanel(props: BreakdownPanelProps) {
 interface BreakdownTableProps {
   items: UsageBreakdownItem[]
   nameColumnKey: 'Model' | 'Group'
+  locale: Intl.LocalesArgument
 }
 
 /**
- * [参数] 分布项和名称列翻译键。
- * [返回] 包含名称、Token 和实际消费三列的紧凑表格节点。
- * 最近修改时间：2026-08-25 23:41:33，将名称列再收窄一半以减少列表占用宽度。
+ * [参数] 分布项、名称列翻译键和数字格式化区域设置。
+ * [返回] 包含名称、请求、Token 和实际消费四列的紧凑表格节点。
+ * 最近修改时间：2026-08-25 00:10:59，按参考截图收紧表格密度并保持原有字段不变。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t } = useTranslation()
@@ -240,16 +244,19 @@ function BreakdownTable(props: BreakdownTableProps) {
   return (
     <div className='overflow-hidden rounded-md border border-border/50'>
       <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
-        {/* 名称列再减少一半，释放的宽度均分给两个右对齐数值列。 */}
         <colgroup>
-          <col className='w-[12.5%]' />
-          <col className='w-[43.75%]' />
-          <col className='w-[43.75%]' />
+          <col className='w-[42%]' />
+          <col className='w-[19%]' />
+          <col className='w-[20%]' />
+          <col className='w-[19%]' />
         </colgroup>
         <TableHeader>
           <TableRow className='hover:bg-transparent border-b border-border/50 bg-transparent'>
             <TableHead className='text-muted-foreground h-7 px-2 align-middle text-xs font-medium'>
               {t(props.nameColumnKey)}
+            </TableHead>
+            <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
+              {t('Requests')}
             </TableHead>
             <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Token')}
@@ -270,6 +277,9 @@ function BreakdownTable(props: BreakdownTableProps) {
               >
                 <TableCell className='max-w-0 truncate px-2 py-1.5 align-middle font-medium'>
                   {displayName(item.name, t)}
+                </TableCell>
+                <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
+                  {formatNumber(item.count, props.locale)}
                 </TableCell>
                 <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
                   {formatTokens(tokens)}
