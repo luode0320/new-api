@@ -31,7 +31,7 @@ jobs:
       TARGET_ARCH: amd64
       # 留空时默认复用 PROJECT_SLUG；只有容器名想单独区分时才需要覆盖。
       REMOTE_USER: root
-      REMOTE_PORT: 22
+      REMOTE_PORT: 18998
       # 这里保留原始 docker run 参数写法，后续项目直接改这一段即可。
       # 当前使用外部 MySQL + Redis；如需切回 SQLite，用 SQLITE_PATH 替换 SQL_DSN/REDIS_CONN_STRING 并移除这两行。
       # 注意：SQLITE_PATH 的查询参数必须用 _pragma=name(value) 格式（驱动为 glebarez pure-Go，mattn 风格的 _journal/_busy_timeout 等会被静默忽略）。
