@@ -47,6 +47,7 @@ jobs:
         -e SQL_MAX_IDLE_CONNS=10 \
         -e SQL_MAX_OPEN_CONNS=20 \
         -e SQL_MAX_LIFETIME=120 \
+        -e GLOBAL_WEB_RATE_LIMIT=60 \
         -e BATCH_UPDATE_ENABLED=true \
         -e ERROR_LOG_ENABLED=true \
         -e 'SQL_DSN=root:Ld588588@tcp(127.0.0.1:33060)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
