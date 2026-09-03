@@ -31,6 +31,13 @@ services:
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
       - BATCH_UPDATE_ENABLED=true
+      # 限流配置：与 docker-compose.yml 保持一致，避免开发时页面 429
+      - GLOBAL_WEB_RATE_LIMIT=300
+      - GLOBAL_WEB_RATE_LIMIT_DURATION=60
+      - GLOBAL_API_RATE_LIMIT=600
+      - GLOBAL_API_RATE_LIMIT_DURATION=180
+      - SEARCH_RATE_LIMIT=60
+      - SEARCH_RATE_LIMIT_DURATION=60
       # Local HTTP dev mode: keep Secure=false and leave TRUSTED_URL unset. This disables the refresh/logout OriginGuard so the :5173 -> :3000 dev proxy works.
       - SESSION_COOKIE_SECURE=false
       # For HTTPS only: set Secure=true and list every exact trusted HTTPS browser Origin. This does not configure relay CORS.
