@@ -19,23 +19,29 @@ type WebAssets struct {
 	IndexPage []byte
 }
 
-func SetWebRouter(router *gin.Engine, assets WebAssets) {
+func SetWebRouter(router *gin.Engine, assets WebAssets, pluginDispatcher gin.HandlerFunc) {
 	frontendFS := common.EmbedFolder(assets.BuildFS, "web/dist")
 
-	router.Use(gzip.Gzip(gzip.DefaultCompression))
-	router.Use(middleware.Cache())
-	// Static assets must be served before the web rate limiter: a single SPA
+	// Static assets are served before the web rate limiter: a single SPA
 	// first load issues ~10 concurrent asset requests, which would exhaust a
 	// per-IP quota sized for page navigation and 429 every page refresh.
-	router.Use(static.Serve("/", frontendFS))
-	router.Use(middleware.GlobalWebRateLimit())
-	router.NoRoute(func(c *gin.Context) {
-		c.Set(middleware.RouteTagKey, "web")
-		if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") || strings.HasPrefix(c.Request.RequestURI, "/assets") {
-			controller.RelayNotFound(c)
-			return
-		}
-		c.Header("Cache-Control", "no-cache")
-		c.Data(http.StatusOK, "text/html; charset=utf-8", assets.IndexPage)
-	})
+	// Cache stays after the limiter so rate-limit rejections never carry a
+	// cacheable Cache-Control header. Static hits terminate the chain here;
+	// unmatched SPA routes fall through to the rate limiter and index.html.
+	router.NoRoute(
+		pluginDispatcher,
+		middleware.RouteTag("web"),
+		gzip.Gzip(gzip.DefaultCompression),
+		static.Serve("/", frontendFS),
+		middleware.GlobalWebRateLimit(),
+		middleware.Cache(),
+		func(c *gin.Context) {
+			if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") || strings.HasPrefix(c.Request.RequestURI, "/assets") {
+				controller.RelayNotFound(c)
+				return
+			}
+			c.Header("Cache-Control", "no-cache")
+			c.Data(http.StatusOK, "text/html; charset=utf-8", assets.IndexPage)
+		},
+	)
 }
