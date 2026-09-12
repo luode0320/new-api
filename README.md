@@ -533,3 +533,4 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 2026-09-04 00:46:22 docs: [限流文档] 追加429限流误伤处理记录
 2026-09-04 01:04:59 chore: [上游同步] 合并父项目 QuantumNous/new-api main（49 提交）
 2026-09-12 21:18:15 fix: [超时配置] 收紧上游响应头等待上限至90秒
+2026-09-12 22:33:26 chore: [行尾符] 统一 .gitattributes 为全类型 LF 规则

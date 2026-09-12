@@ -1,26 +1,14 @@
-# Auto detect text files and perform LF normalization
-* text=auto
-
-# Go files
-*.go text eol=lf
-
-# Config files
-*.json text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf
-*.toml text eol=lf
-*.md text eol=lf
-
-# JavaScript/TypeScript files
-*.js text eol=lf
-*.jsx text eol=lf
-*.ts text eol=lf
-*.tsx text eol=lf
-*.html text eol=lf
-*.css text eol=lf
-
-# Shell scripts
-*.sh text eol=lf
+# 统一行尾符为 LF。
+#
+# 2026-09-12：与 CLIProxyAPI 仓库对齐，行尾符规则统一为 `* text=auto eol=lf`。
+# 原写法为 `* text=auto` 再加逐类型白名单（.go/.json/.yaml/.md/.sh 等），
+# 未列入白名单的文本类型（.txt/.sql/.lua/Dockerfile/.env.example/LICENSE 等）
+# 不会被强制 LF，覆盖不完整。本写法覆盖全部文本类型，不再依赖扩展名白名单。
+#
+# text=auto 让 git 自动识别文本文件并做换行规范化；eol=lf 让 checkout 到工作树
+# 时统一写出 LF。二进制文件由 auto 检测排除（已验证本地 *.png 等仍标记为 -text，
+# 不做行尾转换），下方显式 binary 标注作为额外防御。
+* text=auto eol=lf
 
 # Binary files
 *.png binary
