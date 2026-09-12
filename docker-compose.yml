@@ -43,6 +43,11 @@ services:
       - GLOBAL_API_RATE_LIMIT_DURATION=180
       - SEARCH_RATE_LIMIT=60                 # 每用户每 60 秒允许的搜索请求数（默认 10 次/10 秒，输入联想易误伤）
       - SEARCH_RATE_LIMIT_DURATION=60
+      # 超时配置：上游响应头等待上限。默认 1800s（30 分钟）是为兼容非流式长生成，
+      # 但对“上游建连后静默挂死”的场景代价过大——2026-09-12 故障中单个请求吊死 30 分钟。
+      # 收紧到 90s：正常 LLM 请求（含 flash/turbo 类快模型）响应头均在秒级返回，90s 已留足余量。
+      # 注意：RELAY_TIMEOUT 显式不设（默认 0 = 端到端不限制），避免截断流式长输出。
+      - RELAY_RESPONSE_HEADER_TIMEOUT=90
 #      - STREAMING_TIMEOUT=300  # 流模式无响应超时时间，单位秒，默认120秒，如果出现空补全可以尝试改为更大值 （Streaming timeout in seconds, default is 120s. Increase if experiencing empty completions）
 #      - RELAY_IDLE_CONN_TIMEOUT=90  # Relay HTTP 客户端空闲连接超时时间，单位秒，默认跟随 Go 标准库，设置为0表示不限制 (Relay HTTP client idle keep-alive timeout in seconds, defaults to Go standard library; set 0 to disable)
 #      - SESSION_SECRET=random_string  # 多机部署时设置，必须修改这个随机字符串！！ （multi-node deployment, set this to a random string!!!!!!!）
