@@ -301,3 +301,64 @@ func TestOaiResponsesStreamHandlerExtractsUsageOnIncomplete(t *testing.T) {
 	assert.Equal(t, 64100, usage.TotalTokens)
 }
 
+func TestOaiResponsesStreamHandlerClientVisibleEventsOnIncomplete(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	oldTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() {
+		constant.StreamingTimeout = oldTimeout
+	})
+
+	events := []string{
+		`{"type":"response.created","response":{"id":"resp_123","status":"in_progress"}}`,
+		`{"type":"response.output_item.added","output_index":0,"item":{"id":"rs_123","type":"reasoning","status":"in_progress"}}`,
+		`{"type":"response.reasoning_summary_text.delta","item_id":"rs_123","output_index":0,"summary_index":0,"delta":"正在深入推导数学定理和逻辑闭环..."}`,
+		`{"type":"response.output_item.done","output_index":0,"item":{"id":"rs_123","type":"reasoning","status":"completed","summary":[{"type":"summary_text","text":"正在深入推导数学定理和逻辑闭环..."}]}}`,
+		`{"type":"response.incomplete","response":{"id":"resp_123","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"usage":{"input_tokens":120,"output_tokens":64000,"total_tokens":64120,"output_tokens_details":{"reasoning_tokens":64000}}}}`,
+	}
+
+	var upstreamBody strings.Builder
+	for _, ev := range events {
+		upstreamBody.WriteString("data: ")
+		upstreamBody.WriteString(ev)
+		upstreamBody.WriteString("\n\n")
+	}
+	upstreamBody.WriteString("data: [DONE]\n\n")
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+	c.Set(common.RequestIdKey, "client-visible-incomplete-test")
+	info := &relaycommon.RelayInfo{
+		OriginModelName: "deepseek-v4.1-flash",
+		DisablePing:     true,
+		ChannelMeta: &relaycommon.ChannelMeta{
+			UpstreamModelName: "deepseek-v4.1-flash",
+		},
+	}
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(upstreamBody.String())),
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+	}
+
+	usage, apiErr := OaiResponsesStreamHandler(c, info, resp)
+	require.Nil(t, apiErr, "客户端处理不应报错")
+	require.NotNil(t, usage, "Usage 不应为空")
+
+	clientReceived := w.Body.String()
+	t.Logf("=== 客户端实际接收到的全部 HTTP 响应体 ===\n%s", clientReceived)
+
+	// 断言客户端收到了完整的思维链和 incomplete 终态帧
+	assert.Contains(t, clientReceived, "正在深入推导数学定理和逻辑闭环...")
+	assert.Contains(t, clientReceived, `event: response.incomplete`)
+	assert.Contains(t, clientReceived, `"status":"incomplete"`)
+	assert.Contains(t, clientReceived, `"max_output_tokens"`)
+
+	// 断言后端计费准确提取到 64000 个思考 tokens
+	assert.Equal(t, 120, usage.PromptTokens)
+	assert.Equal(t, 64000, usage.CompletionTokens)
+	assert.Equal(t, 64120, usage.TotalTokens)
+}
+
+
