@@ -535,3 +535,4 @@ If this project is helpful to you, welcome to give us a ⭐️ Star！
 2026-09-12 21:18:15 fix: [超时配置] 收紧上游响应头等待上限至90秒
 2026-09-12 22:33:26 chore: [行尾符] 统一 .gitattributes 为全类型 LF 规则
 2026-10-22 22:33:25 style: [钱包布局] 订阅套餐上移为全宽行并与添加资金对齐
+2026-10-22 23:25:44 refactor: [钱包订阅] 我的订阅收进套餐表头并改用弹窗查看明细

@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
@@ -187,5 +187,35 @@ describe('wallet page layout', () => {
     expect(grid?.className).toContain(
       'sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]'
     )
+  })
+
+  test('keeps my subscriptions inside the plans card header', async () => {
+    renderWallet()
+
+    const entry = (await screen.findByText('My Subscriptions')).closest(
+      'button'
+    )
+    const plansCard = cardRoot(screen.getByText('Subscription Plans'))
+    const header = plansCard.querySelector('[data-slot="card-header"]')
+
+    expect(entry).not.toBeNull()
+    expect(header).not.toBeNull()
+    expect(header?.contains(entry)).toBe(true)
+    expect(entry).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(
+      screen.queryByText('Subscribe to a plan for model access')
+    ).not.toBeNull()
+  })
+
+  test('opens the subscription details dialog from the header entry', async () => {
+    renderWallet()
+
+    const entry = (await screen.findByText('My Subscriptions')).closest(
+      'button'
+    )
+    fireEvent.click(entry as HTMLElement)
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('No subscription records')).toBeInTheDocument()
   })
 })
