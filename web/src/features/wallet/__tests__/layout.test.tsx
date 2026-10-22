@@ -202,9 +202,21 @@ describe('wallet page layout', () => {
     expect(header).not.toBeNull()
     expect(header?.contains(entry)).toBe(true)
     expect(entry).toHaveAttribute('aria-haspopup', 'dialog')
+  })
+
+  test('keeps explanatory copy out of the plans card header', async () => {
+    renderWallet()
+
+    const plansCard = cardRoot(await screen.findByText('Subscription Plans'))
+    const header = plansCard.querySelector('[data-slot="card-header"]')
+
     expect(
       screen.queryByText('Subscribe to a plan for model access')
-    ).not.toBeNull()
+    ).toBeNull()
+    expect(screen.queryByText(/Preference saved as/)).toBeNull()
+
+    const warningHint = screen.getByLabelText(/Preference saved as/)
+    expect(header?.contains(warningHint)).toBe(true)
   })
 
   test('opens the subscription details dialog from the header entry', async () => {

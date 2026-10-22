@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Crown, RefreshCw, Sparkles, Check } from 'lucide-react'
+import { Crown, RefreshCw, Sparkles, Check, TriangleAlert } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -217,8 +217,10 @@ export function SubscriptionPlansCard({
     return (
       <Card data-card-hover='false' className='gap-0 overflow-hidden py-0'>
         <CardHeader className='border-b p-3 !pb-3 sm:p-5 sm:!pb-5'>
-          <Skeleton className='h-6 w-32' />
-          <Skeleton className='h-8 w-64' />
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+            <Skeleton className='h-6 w-32' />
+            <Skeleton className='h-8 w-64' />
+          </div>
         </CardHeader>
         <CardContent className='p-3 sm:p-5'>
           <div className='grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]'>
@@ -255,128 +257,126 @@ export function SubscriptionPlansCard({
     <>
       <TitledCard
         title={t('Subscription Plans')}
-        description={t('Subscribe to a plan for model access')}
         icon={<Crown className='h-4 w-4' />}
         iconTone='warning'
         disableHoverEffect
         action={
-          <div className='flex flex-col items-stretch gap-1.5 sm:items-end'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                className='h-8 gap-2 px-2.5 text-xs'
-                onClick={() => setSubscriptionsOpen(true)}
-                aria-haspopup='dialog'
-              >
-                <span
-                  className={cn(
-                    'size-1.5 shrink-0 rounded-full',
-                    hasActive ? dotColorMap.success : dotColorMap.neutral
-                  )}
-                  aria-hidden='true'
-                />
-                <span className='font-medium'>{t('My Subscriptions')}</span>
-                {hasActive ? (
-                  <span className={cn(textColorMap.success)}>
-                    {activeSubscriptions.length} {t('active')}
-                  </span>
-                ) : (
-                  <span className='text-muted-foreground'>
-                    {t('No Active')}
-                  </span>
+          <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
+            <Button
+              variant='outline'
+              size='sm'
+              className='h-8 gap-2 px-2.5 text-xs'
+              onClick={() => setSubscriptionsOpen(true)}
+              aria-haspopup='dialog'
+            >
+              <span
+                className={cn(
+                  'size-1.5 shrink-0 rounded-full',
+                  hasActive ? dotColorMap.success : dotColorMap.neutral
                 )}
-                {expiredCount > 0 && (
-                  <span className='text-muted-foreground'>
-                    · {expiredCount} {t('expired')}
-                  </span>
-                )}
-              </Button>
-              <Select
-                items={[
-                  {
-                    value: 'subscription_first',
-                    label: (
-                      <>
-                        {getBillingPreferenceLabel('subscription_first', t)}
-                        {disablePref ? ` (${t('No Active')})` : ''}
-                      </>
-                    ),
-                  },
-                  {
-                    value: 'wallet_first',
-                    label: getBillingPreferenceLabel('wallet_first', t),
-                  },
-                  {
-                    value: 'subscription_only',
-                    label: (
-                      <>
-                        {getBillingPreferenceLabel('subscription_only', t)}
-                        {disablePref ? ` (${t('No Active')})` : ''}
-                      </>
-                    ),
-                  },
-                  {
-                    value: 'wallet_only',
-                    label: getBillingPreferenceLabel('wallet_only', t),
-                  },
-                ]}
-                value={billingPreference}
-                onValueChange={(v) => v !== null && handlePreferenceChange(v)}
-              >
-                <SelectTrigger className='h-8 flex-1 text-xs sm:w-[140px] sm:flex-none'>
-                  <SelectValue>
-                    {getBillingPreferenceLabel(billingPreference, t)}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent alignItemWithTrigger={false}>
-                  <SelectGroup>
-                    <SelectItem
-                      value='subscription_first'
-                      disabled={disablePref}
-                    >
+                aria-hidden='true'
+              />
+              <span className='font-medium'>{t('My Subscriptions')}</span>
+              {hasActive ? (
+                <span className={cn(textColorMap.success)}>
+                  {activeSubscriptions.length} {t('active')}
+                </span>
+              ) : (
+                <span className='text-muted-foreground'>{t('No Active')}</span>
+              )}
+              {expiredCount > 0 && (
+                <span className='text-muted-foreground'>
+                  · {expiredCount} {t('expired')}
+                </span>
+              )}
+            </Button>
+            <Select
+              items={[
+                {
+                  value: 'subscription_first',
+                  label: (
+                    <>
                       {getBillingPreferenceLabel('subscription_first', t)}
                       {disablePref ? ` (${t('No Active')})` : ''}
-                    </SelectItem>
-                    <SelectItem value='wallet_first'>
-                      {getBillingPreferenceLabel('wallet_first', t)}
-                    </SelectItem>
-                    <SelectItem
-                      value='subscription_only'
-                      disabled={disablePref}
-                    >
+                    </>
+                  ),
+                },
+                {
+                  value: 'wallet_first',
+                  label: getBillingPreferenceLabel('wallet_first', t),
+                },
+                {
+                  value: 'subscription_only',
+                  label: (
+                    <>
                       {getBillingPreferenceLabel('subscription_only', t)}
                       {disablePref ? ` (${t('No Active')})` : ''}
-                    </SelectItem>
-                    <SelectItem value='wallet_only'>
-                      {getBillingPreferenceLabel('wallet_only', t)}
-                    </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <Button
-                variant='ghost'
-                size='icon'
-                className='h-8 w-8'
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
-                />
-              </Button>
-            </div>
+                    </>
+                  ),
+                },
+                {
+                  value: 'wallet_only',
+                  label: getBillingPreferenceLabel('wallet_only', t),
+                },
+              ]}
+              value={billingPreference}
+              onValueChange={(v) => v !== null && handlePreferenceChange(v)}
+            >
+              <SelectTrigger className='h-8 flex-1 text-xs sm:w-[140px] sm:flex-none'>
+                <SelectValue>
+                  {getBillingPreferenceLabel(billingPreference, t)}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent alignItemWithTrigger={false}>
+                <SelectGroup>
+                  <SelectItem value='subscription_first' disabled={disablePref}>
+                    {getBillingPreferenceLabel('subscription_first', t)}
+                    {disablePref ? ` (${t('No Active')})` : ''}
+                  </SelectItem>
+                  <SelectItem value='wallet_first'>
+                    {getBillingPreferenceLabel('wallet_first', t)}
+                  </SelectItem>
+                  <SelectItem value='subscription_only' disabled={disablePref}>
+                    {getBillingPreferenceLabel('subscription_only', t)}
+                    {disablePref ? ` (${t('No Active')})` : ''}
+                  </SelectItem>
+                  <SelectItem value='wallet_only'>
+                    {getBillingPreferenceLabel('wallet_only', t)}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}
+              />
+            </Button>
             {prefWarning && (
-              <p
-                className={cn(
-                  'max-w-72 text-xs leading-4',
-                  prefWarningDestructive
-                    ? 'text-destructive'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {prefWarning}
-              </p>
+              <Tooltip>
+                <TooltipTrigger
+                  aria-label={prefWarning}
+                  render={
+                    <button
+                      type='button'
+                      className={cn(
+                        'inline-flex size-8 shrink-0 cursor-help items-center justify-center rounded-md',
+                        prefWarningDestructive
+                          ? 'text-destructive'
+                          : 'text-warning'
+                      )}
+                    />
+                  }
+                >
+                  <TriangleAlert className='size-3.5' />
+                </TooltipTrigger>
+                <TooltipContent>{prefWarning}</TooltipContent>
+              </Tooltip>
             )}
           </div>
         }
