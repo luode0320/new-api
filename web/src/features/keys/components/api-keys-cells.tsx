@@ -176,44 +176,6 @@ export function UnlimitedQuotaBadge(props: UnlimitedQuotaBadgeProps) {
   )
 }
 
-export function ModelLimitsCell({ apiKey }: { apiKey: ApiKey }) {
-  const { t } = useTranslation()
-
-  if (!apiKey.model_limits_enabled || !apiKey.model_limits) {
-    return (
-      <StatusBadge
-        label={t('Unlimited')}
-        variant='neutral'
-        copyable={false}
-        className='-ml-1.5'
-      />
-    )
-  }
-
-  const models = apiKey.model_limits.split(',').filter(Boolean)
-
-  return (
-    <Tooltip>
-      <TooltipTrigger render={<BadgeCell />}>
-        <StatusBadge
-          label={t('{{count}} model(s)', { count: models.length })}
-          variant='neutral'
-          copyable={false}
-        />
-      </TooltipTrigger>
-      <TooltipContent side='top' className='max-w-xs'>
-        <div className='max-h-[200px] space-y-0.5 overflow-y-auto text-xs'>
-          {models.map((m) => (
-            <div key={m} className='font-mono'>
-              {m}
-            </div>
-          ))}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 export function IpRestrictionsCell({ apiKey }: { apiKey: ApiKey }) {
   const { t } = useTranslation()
   const allowIps = apiKey.allow_ips?.trim()

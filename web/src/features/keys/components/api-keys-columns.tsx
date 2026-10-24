@@ -38,11 +38,11 @@ import { cn } from '@/lib/utils'
 import { API_KEY_STATUSES } from '../constants'
 import type { ApiKey } from '../types'
 import { ApiKeyGroupCell } from './api-key-group-cell'
+import { ModelLimitsCell } from './api-key-model-limits-cell'
 import { ApiKeyTimestampCell } from './api-key-timestamp-cell'
 import {
   ApiKeyCell,
   IpRestrictionsCell,
-  ModelLimitsCell,
   UnlimitedQuotaBadge,
 } from './api-keys-cells'
 import { DataTableRowActions } from './data-table-row-actions'

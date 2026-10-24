@@ -108,6 +108,17 @@ export async function updateApiKeyStatus(
   return res.data
 }
 
+// List the models currently enabled for one user-usable group
+export async function getGroupAvailableModels(
+  group: string
+): Promise<string[]> {
+  const res = await api.get('/api/user/models', {
+    params: group ? { group } : undefined,
+  })
+  if (!res.data?.success || !Array.isArray(res.data.data)) return []
+  return res.data.data as string[]
+}
+
 // Fetch the real (unmasked) key for a token by ID
 export async function fetchTokenKey(
   id: number
