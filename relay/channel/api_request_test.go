@@ -205,3 +205,108 @@ func TestProcessHeaderOverride_PassHeadersTemplateSetsRuntimeHeaders(t *testing.
 	require.Equal(t, "sess-123", upstreamReq.Header.Get("Session_id"))
 	require.Empty(t, upstreamReq.Header.Get("X-Codex-Beta-Features"))
 }
+
+// The {user_id} placeholder must reach the real upstream header, otherwise
+// session-sticky routing downstream cannot tell users apart.
+func TestProcessHeaderOverride_UserIDPlaceholderSetsSessionHeader(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+
+	info := &relaycommon.RelayInfo{
+		UserId:        104,
+		IsChannelTest: false,
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ParamOverride: map[string]any{
+				"operations": []any{
+					map[string]any{
+						"mode":  "set_header",
+						"path":  "X-Session-ID",
+						"value": "{user_id}",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := relaycommon.ApplyParamOverrideWithRelayInfo([]byte(`{"model":"deepseek-v4.1-flash"}`), info)
+	require.NoError(t, err)
+
+	headers, err := processHeaderOverride(info, ctx)
+	require.NoError(t, err)
+
+	upstreamReq := httptest.NewRequest(http.MethodPost, "https://example.com/v1/chat/completions", nil)
+	applyHeaderOverrideToRequest(upstreamReq, headers)
+	require.Equal(t, "104", upstreamReq.Header.Get("X-Session-ID"))
+}
+
+// A missing user id must drop the header instead of emitting a placeholder
+// string, which downstream would treat as one shared session.
+func TestProcessHeaderOverride_UserIDPlaceholderSkipsWithoutUser(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+
+	info := &relaycommon.RelayInfo{
+		IsChannelTest: false,
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ParamOverride: map[string]any{
+				"operations": []any{
+					map[string]any{
+						"mode":  "set_header",
+						"path":  "X-Session-ID",
+						"value": "{user_id}",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := relaycommon.ApplyParamOverrideWithRelayInfo([]byte(`{"model":"deepseek-v4.1-flash"}`), info)
+	require.NoError(t, err)
+
+	headers, err := processHeaderOverride(info, ctx)
+	require.NoError(t, err)
+	_, exists := headers["x-session-id"]
+	require.False(t, exists)
+}
+
+// {user_id} must compose with {api_key} in one template.
+func TestProcessHeaderOverride_UserIDComposesWithAPIKey(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+
+	info := &relaycommon.RelayInfo{
+		UserId:        7,
+		IsChannelTest: false,
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ParamOverride: map[string]any{
+				"operations": []any{
+					map[string]any{
+						"mode":  "set_header",
+						"path":  "X-Session-ID",
+						"value": "u{user_id}-k{api_key}",
+					},
+				},
+			},
+		},
+	}
+
+	_, err := relaycommon.ApplyParamOverrideWithRelayInfo([]byte(`{"model":"deepseek-v4.1-flash"}`), info)
+	require.NoError(t, err)
+	info.ApiKey = "sk-test"
+
+	headers, err := processHeaderOverride(info, ctx)
+	require.NoError(t, err)
+	require.Equal(t, "u7-ksk-test", headers["x-session-id"])
+}

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +64,12 @@ func SetupApiRequestHeader(info *common.RelayInfo, c *gin.Context, req *http.Hea
 }
 
 const clientHeaderPlaceholderPrefix = "{client_header:"
+
+// userIDHeaderPlaceholder resolves to the calling user's id. It gives channel
+// header overrides a stable per-user session key: downstream proxies that do
+// session-sticky routing (for example CLIProxyAPI's session affinity) then bind
+// each user to one upstream credential instead of grouping unrelated traffic.
+const userIDHeaderPlaceholder = "{user_id}"
 
 const (
 	headerPassthroughAllKey        = "*"
@@ -150,7 +157,7 @@ func shouldSkipPassthroughHeader(name string) bool {
 	return false
 }
 
-func applyHeaderOverridePlaceholders(template string, c *gin.Context, apiKey string) (string, bool, error) {
+func applyHeaderOverridePlaceholders(template string, c *gin.Context, info *common.RelayInfo, apiKey string) (string, bool, error) {
 	trimmed := strings.TrimSpace(template)
 	if strings.HasPrefix(trimmed, clientHeaderPlaceholderPrefix) {
 		afterPrefix := trimmed[len(clientHeaderPlaceholderPrefix):]
@@ -172,6 +179,13 @@ func applyHeaderOverridePlaceholders(template string, c *gin.Context, apiKey str
 		}
 		// Do not interpolate {api_key} inside client-supplied content.
 		return clientHeaderValue, true, nil
+	}
+
+	if strings.Contains(template, userIDHeaderPlaceholder) {
+		if info == nil || info.UserId <= 0 {
+			return "", false, nil
+		}
+		template = strings.ReplaceAll(template, userIDHeaderPlaceholder, strconv.Itoa(info.UserId))
 	}
 
 	if strings.Contains(template, "{api_key}") {
@@ -280,7 +294,7 @@ func processHeaderOverride(info *common.RelayInfo, c *gin.Context) (map[string]s
 			continue
 		}
 
-		value, include, err := applyHeaderOverridePlaceholders(str, c, info.ApiKey)
+		value, include, err := applyHeaderOverridePlaceholders(str, c, info, info.ApiKey)
 		if err != nil {
 			return nil, types.NewError(err, types.ErrorCodeChannelHeaderOverrideInvalid)
 		}
