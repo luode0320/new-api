@@ -39,15 +39,17 @@ import {
 } from '@/lib/format'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
 
-/**
- * 后端（model/usedata.go 的 GetQuotaUsageBreakdown）把空维度归一为这两个 sentinel，
- * 前端负责翻译；这里集中处理避免组件各处各自判断。
- */
+/** 后端把空维度归一为这两个 sentinel，这里集中映射为当前语言的显示名。 */
 const UNGROUPED_SENTINEL = '__ungrouped__'
 const UNKNOWN_MODEL_SENTINEL = '__unknown__'
 
 const MAX_VISIBLE_ROWS = 8
 
+/**
+ * [参数] 后端返回的维度名与翻译函数。
+ * [返回] 面向用户的显示名，sentinel 译为当前语言，其余原样返回。
+ * 最近修改时间：2026-10-25 19:08:15，新增 __unknown__ 归一化翻译。
+ */
 function displayName(name: string, t: (k: string) => string) {
   if (name === UNGROUPED_SENTINEL) return t('Ungrouped')
   if (name === UNKNOWN_MODEL_SENTINEL) return t('Unknown')
@@ -57,7 +59,7 @@ function displayName(name: string, t: (k: string) => string) {
 /**
  * [参数] 数值、数字格式化区域设置。
  * [返回] 用于 Token 数与单价的紧凑显示文本，非正数或非有限值返回 "-"。
- * 最近修改时间：2026-10-25，新建以替代 formatTokens 的 K/M 硬编码，避免 <1000 时直接输出原始浮点。
+ * 最近修改时间：2026-10-25 19:08:15，新建以替代 formatTokens 的 K/M 硬编码，避免 <1000 时直接输出原始浮点。
  */
 function formatMetric(value: number, locale: Intl.LocalesArgument): string {
   if (!Number.isFinite(value) || value <= 0) return '-'
@@ -82,6 +84,7 @@ function formatMetric(value: number, locale: Intl.LocalesArgument): string {
 /**
  * [参数] 占比百分比、数字格式化区域设置。
  * [返回] 占比文本，非零但极小的值显示为 "<0.01%" 以免被四舍五入成 0%。
+ * 最近修改时间：2026-10-25 19:08:15，新建以固定两位小数并保留极小占比。
  */
 function formatShare(pct: number, locale: Intl.LocalesArgument): string {
   if (pct <= 0) return '0%'
@@ -103,7 +106,7 @@ interface BreakdownPanelProps {
 /**
  * [参数] 分布面板标题、图标、分布数据和加载状态。
  * [返回] 模型或分组分布面板节点。
- * 最近修改时间：2026-10-25，保持环图移除后的纯表格布局，仅调整骨架行数。
+ * 最近修改时间：2026-10-25 19:08:15，保持环图移除后的纯表格布局，仅调整骨架行数。
  */
 function BreakdownPanel(props: BreakdownPanelProps) {
   const { t } = useTranslation()
@@ -167,7 +170,7 @@ interface BreakdownTableProps {
 /**
  * [参数] 分布项与名称列翻译键。
  * [返回] 名称、请求数、Token、单位货币 Token 数和实际消费（含行内占比条）的紧凑表格节点。
- * 最近修改时间：2026-10-25，重设计列宽并新增占比条、溢出提示，单价列随货币设置自适应。
+ * 最近修改时间：2026-10-25 19:08:15，重设计列宽并新增占比条、溢出提示，单价列随货币设置自适应。
  */
 function BreakdownTable(props: BreakdownTableProps) {
   const { t, i18n } = useTranslation()

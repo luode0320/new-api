@@ -201,8 +201,9 @@ const (
 //
 // [参数] startTimestamp/endTimestamp 时间范围（0 表示不限）；username 非空时只统计该用户。
 // [返回] 模型分布、分组分布，以及任一查询失败的错误信息。
-// 最近修改时间：2026-10-25，改读 quota_data 以与看板统计卡片、柱状图保持同一数据口径。
+// 最近修改时间：2026-10-25 19:08:15，改读 quota_data 以与看板统计卡片、柱状图保持同一数据口径。
 func GetQuotaUsageBreakdown(startTimestamp int64, endTimestamp int64, username string) (modelBreakdown []UsageBreakdownItem, groupBreakdown []UsageBreakdownItem, err error) {
+	// 1. 拼装时间范围与用户过滤条件，0 与空串表示不限。
 	base := DB.Table("quota_data")
 	if startTimestamp != 0 {
 		base = base.Where("created_at >= ?", startTimestamp)
@@ -216,10 +217,11 @@ func GetQuotaUsageBreakdown(startTimestamp int64, endTimestamp int64, username s
 
 	const breakdownSelect = "COALESCE(SUM(count), 0) AS count, COALESCE(SUM(quota), 0) AS quota, COALESCE(SUM(token_used), 0) AS tokens"
 
-	// 空模型名不排除，否则各行之和会小于统计卡片总数；统一归一为 sentinel 由前端翻译。
+	// 2. 空模型名与空分组统一归一为 sentinel，由前端翻译为当前语言。
 	modelSelectExpr := "CASE WHEN model_name = '' OR model_name IS NULL THEN '" + breakdownUnknownModel + "' ELSE model_name END"
 	groupSelectExpr := "CASE WHEN use_group = '' OR use_group IS NULL THEN '" + breakdownUngrouped + "' ELSE use_group END"
 
+	// 3. 按模型维度聚合。
 	err = base.Session(&gorm.Session{}).
 		Select(modelSelectExpr + " AS name, " + breakdownSelect).
 		Group(modelSelectExpr).
@@ -230,6 +232,7 @@ func GetQuotaUsageBreakdown(startTimestamp int64, endTimestamp int64, username s
 		return modelBreakdown, groupBreakdown, errors.New("查询模型分布失败")
 	}
 
+	// 4. 按分组维度聚合。
 	err = base.Session(&gorm.Session{}).
 		Select(groupSelectExpr + " AS name, " + breakdownSelect).
 		Group(groupSelectExpr).
