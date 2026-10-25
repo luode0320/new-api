@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -180,4 +181,64 @@ func GetAllQuotaDates(startTime int64, endTime int64, username string) (quotaDat
 	//err = DB.Table("quota_data").Where("created_at >= ? and created_at <= ?", startTime, endTime).Find(&quotaDatas).Error
 	err = DB.Table("quota_data").Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").Where("created_at >= ? and created_at <= ?", startTime, endTime).Group("model_name, created_at").Find(&quotaDatas).Error
 	return quotaDatas, err
+}
+
+// UsageBreakdownItem 表示按某个维度（模型/分组）聚合后的使用分布项。
+type UsageBreakdownItem struct {
+	Name   string `json:"name"`
+	Count  int    `json:"count"`
+	Quota  int    `json:"quota"`
+	Tokens int    `json:"tokens"`
+}
+
+// 空值维度在聚合结果中的占位符，前端负责翻译为当前语言。
+const (
+	breakdownUnknownModel = "__unknown__"
+	breakdownUngrouped    = "__ungrouped__"
+)
+
+// GetQuotaUsageBreakdown 按模型与分组两个维度聚合 quota_data 看板数据。
+//
+// [参数] startTimestamp/endTimestamp 时间范围（0 表示不限）；username 非空时只统计该用户。
+// [返回] 模型分布、分组分布，以及任一查询失败的错误信息。
+// 最近修改时间：2026-10-25，改读 quota_data 以与看板统计卡片、柱状图保持同一数据口径。
+func GetQuotaUsageBreakdown(startTimestamp int64, endTimestamp int64, username string) (modelBreakdown []UsageBreakdownItem, groupBreakdown []UsageBreakdownItem, err error) {
+	base := DB.Table("quota_data")
+	if startTimestamp != 0 {
+		base = base.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp != 0 {
+		base = base.Where("created_at <= ?", endTimestamp)
+	}
+	if username != "" {
+		base = base.Where("username = ?", username)
+	}
+
+	const breakdownSelect = "COALESCE(SUM(count), 0) AS count, COALESCE(SUM(quota), 0) AS quota, COALESCE(SUM(token_used), 0) AS tokens"
+
+	// 空模型名不排除，否则各行之和会小于统计卡片总数；统一归一为 sentinel 由前端翻译。
+	modelSelectExpr := "CASE WHEN model_name = '' OR model_name IS NULL THEN '" + breakdownUnknownModel + "' ELSE model_name END"
+	groupSelectExpr := "CASE WHEN use_group = '' OR use_group IS NULL THEN '" + breakdownUngrouped + "' ELSE use_group END"
+
+	err = base.Session(&gorm.Session{}).
+		Select(modelSelectExpr + " AS name, " + breakdownSelect).
+		Group(modelSelectExpr).
+		Order("quota DESC, name ASC").
+		Scan(&modelBreakdown).Error
+	if err != nil {
+		common.SysError("failed to query model usage breakdown: " + err.Error())
+		return modelBreakdown, groupBreakdown, errors.New("查询模型分布失败")
+	}
+
+	err = base.Session(&gorm.Session{}).
+		Select(groupSelectExpr + " AS name, " + breakdownSelect).
+		Group(groupSelectExpr).
+		Order("quota DESC, name ASC").
+		Scan(&groupBreakdown).Error
+	if err != nil {
+		common.SysError("failed to query group usage breakdown: " + err.Error())
+		return modelBreakdown, groupBreakdown, errors.New("查询分组分布失败")
+	}
+
+	return modelBreakdown, groupBreakdown, nil
 }

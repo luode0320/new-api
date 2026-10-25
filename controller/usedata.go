@@ -37,7 +37,7 @@ func GetAllQuotaDates(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	modelBreakdown, groupBreakdown, _ := model.GetLogUsageBreakdown(startTimestamp, endTimestamp, "", username, "", 0, "")
+	modelBreakdown, groupBreakdown, _ := model.GetQuotaUsageBreakdown(startTimestamp, endTimestamp, username)
 	c.JSON(http.StatusOK, gin.H{
 		"success":         true,
 		"message":         "",
@@ -81,7 +81,7 @@ func GetUserQuotaDates(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
-	modelBreakdown, groupBreakdown, _ := model.GetLogUsageBreakdown(startTimestamp, endTimestamp, "", username, "", 0, "")
+	modelBreakdown, groupBreakdown, _ := model.GetQuotaUsageBreakdown(startTimestamp, endTimestamp, username)
 	c.JSON(http.StatusOK, gin.H{
 		"success":         true,
 		"message":         "",

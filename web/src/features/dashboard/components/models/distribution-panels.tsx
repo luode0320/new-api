@@ -35,18 +35,60 @@ import { toIntlLocale } from '@/i18n/languages'
 import {
   formatNumber,
   formatQuota,
-  formatTokens,
   quotaUnitsToDollars,
 } from '@/lib/format'
+import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
 
 /**
- * 后端（model/log.go 的 GetLogUsageBreakdown）把空 group 归一为该 sentinel，
+ * 后端（model/usedata.go 的 GetQuotaUsageBreakdown）把空维度归一为这两个 sentinel，
  * 前端负责翻译；这里集中处理避免组件各处各自判断。
  */
 const UNGROUPED_SENTINEL = '__ungrouped__'
+const UNKNOWN_MODEL_SENTINEL = '__unknown__'
+
+const MAX_VISIBLE_ROWS = 8
 
 function displayName(name: string, t: (k: string) => string) {
-  return name === UNGROUPED_SENTINEL ? t('Ungrouped') : name
+  if (name === UNGROUPED_SENTINEL) return t('Ungrouped')
+  if (name === UNKNOWN_MODEL_SENTINEL) return t('Unknown')
+  return name
+}
+
+/**
+ * [参数] 数值、数字格式化区域设置。
+ * [返回] 用于 Token 数与单价的紧凑显示文本，非正数或非有限值返回 "-"。
+ * 最近修改时间：2026-10-25，新建以替代 formatTokens 的 K/M 硬编码，避免 <1000 时直接输出原始浮点。
+ */
+function formatMetric(value: number, locale: Intl.LocalesArgument): string {
+  if (!Number.isFinite(value) || value <= 0) return '-'
+
+  const abs = Math.abs(value)
+  if (abs >= 1e4) {
+    return new Intl.NumberFormat(locale, {
+      notation: 'compact',
+      maximumFractionDigits: 2,
+    }).format(value)
+  }
+  if (abs >= 1) {
+    return new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 2,
+    }).format(value)
+  }
+  return new Intl.NumberFormat(locale, {
+    maximumSignificantDigits: 2,
+  }).format(value)
+}
+
+/**
+ * [参数] 占比百分比、数字格式化区域设置。
+ * [返回] 占比文本，非零但极小的值显示为 "<0.01%" 以免被四舍五入成 0%。
+ */
+function formatShare(pct: number, locale: Intl.LocalesArgument): string {
+  if (pct <= 0) return '0%'
+  if (pct < 0.01) return '<0.01%'
+  return `${new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 2,
+  }).format(pct)}%`
 }
 
 interface BreakdownPanelProps {
@@ -61,11 +103,10 @@ interface BreakdownPanelProps {
 /**
  * [参数] 分布面板标题、图标、分布数据和加载状态。
  * [返回] 模型或分组分布面板节点。
- * 最近修改时间：2026-08-26 01:58:23，移除环图仅保留分布表格，避免图表与列表并存导致的横向空间冲突。
+ * 最近修改时间：2026-10-25，保持环图移除后的纯表格布局，仅调整骨架行数。
  */
 function BreakdownPanel(props: BreakdownPanelProps) {
-  const { t, i18n } = useTranslation()
-  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  const { t } = useTranslation()
   // 表格按实际消耗（quota）倒序排，与面板排序口径保持一致。
   const sortedItems = useMemo(() => {
     return [...props.items].sort((a, b) => (b.quota || 0) - (a.quota || 0))
@@ -79,19 +120,17 @@ function BreakdownPanel(props: BreakdownPanelProps) {
     content = (
       <div className='grid h-full grid-cols-1 gap-2'>
         <div className='space-y-2 p-1'>
-          {(['tokens', 'quota', 'requests'] as const).map((placeholder) => (
-            <Skeleton key={`skeleton-${placeholder}`} className='h-8 w-full' />
-          ))}
+          {['tokens', 'quota', 'requests', 'per-unit', 'share'].map(
+            (placeholder) => (
+              <Skeleton key={`skeleton-${placeholder}`} className='h-7 w-full' />
+            )
+          )}
         </div>
       </div>
     )
   } else if (hasData) {
     content = (
-      <BreakdownTable
-        items={sortedItems}
-        nameColumnKey={props.nameColumnKey}
-        locale={locale}
-      />
+      <BreakdownTable items={sortedItems} nameColumnKey={props.nameColumnKey} />
     )
   } else {
     content = (
@@ -123,27 +162,49 @@ function BreakdownPanel(props: BreakdownPanelProps) {
 interface BreakdownTableProps {
   items: UsageBreakdownItem[]
   nameColumnKey: 'Model' | 'Group'
-  locale: Intl.LocalesArgument
 }
 
 /**
- * [参数] 分布项、名称列翻译键和数字格式化区域设置。
- * [返回] 包含名称、请求、Token、单币 Token 数量和实际消费五列的紧凑表格节点。
- * 最近修改时间：2026-08-26 01:46:57，新增"1元 Token"列展示每 1 单位货币可用的 Token 数（tokens / displayAmount），公式对 USD/CNY/自定义币种一致。
+ * [参数] 分布项与名称列翻译键。
+ * [返回] 名称、请求数、Token、单位货币 Token 数和实际消费（含行内占比条）的紧凑表格节点。
+ * 最近修改时间：2026-10-25，重设计列宽并新增占比条、溢出提示，单价列随货币设置自适应。
  */
 function BreakdownTable(props: BreakdownTableProps) {
-  const { t } = useTranslation()
-  const rows = props.items.slice(0, 8)
+  const { t, i18n } = useTranslation()
+  const locale = toIntlLocale(i18n.resolvedLanguage || i18n.language)
+  const rows = props.items.slice(0, MAX_VISIBLE_ROWS)
+  const hiddenCount = props.items.length - rows.length
+
+  // 按 Token 计价时"每单位货币可用 Token 数"无意义，整列隐藏。
+  const showPerCurrency = isCurrencyDisplayEnabled()
+  const currencyLabel = getCurrencyLabel()
+
+  // 占比分母取全部条目，包含被折叠的第 9 项及以后，避免占比之和不足 100%。
+  const totalQuota = props.items.reduce(
+    (sum, item) => sum + (item.quota || 0),
+    0
+  )
 
   return (
     <div className='overflow-hidden rounded-md border border-border/50'>
-      <Table className='table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
+      <Table className='min-w-[26rem] table-fixed text-xs [&_td]:!text-xs [&_th]:!text-xs'>
         <colgroup>
-          <col className='w-[20%]' />
-          <col className='w-[17%]' />
-          <col className='w-[17%]' />
-          <col className='w-[17%]' />
-          <col className='w-[17%]' />
+          {showPerCurrency ? (
+            <>
+              <col className='w-[26%]' />
+              <col className='w-[14%]' />
+              <col className='w-[18%]' />
+              <col className='w-[18%]' />
+              <col className='w-[24%]' />
+            </>
+          ) : (
+            <>
+              <col className='w-[30%]' />
+              <col className='w-[18%]' />
+              <col className='w-[22%]' />
+              <col className='w-[30%]' />
+            </>
+          )}
         </colgroup>
         <TableHeader>
           <TableRow className='hover:bg-transparent border-b border-border/50 bg-transparent'>
@@ -156,12 +217,14 @@ function BreakdownTable(props: BreakdownTableProps) {
             <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Token')}
             </TableHead>
-            <TableHead
-              title={t('Tokens consumed per 1 unit of actual cost')}
-              className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'
-            >
-              {t('Per $1')}
-            </TableHead>
+            {showPerCurrency && (
+              <TableHead
+                title={t('Tokens consumed per 1 unit of actual cost')}
+                className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'
+              >
+                {t('Token / {{currency}}', { currency: currencyLabel })}
+              </TableHead>
+            )}
             <TableHead className='text-muted-foreground h-7 px-2 align-middle text-right text-xs font-medium'>
               {t('Actual')}
             </TableHead>
@@ -169,37 +232,71 @@ function BreakdownTable(props: BreakdownTableProps) {
         </TableHeader>
         <TableBody className='[&>tr]:!h-7'>
           {rows.map((item) => {
-            const tokens =
-              (item.input_tokens || 0) + (item.output_tokens || 0)
-            // 单币 Token 数 = 总 token / 显示金额（USD/CNY/自定义币种由 quotaUnitsToDollars 统一换算）
-            const displayAmount = quotaUnitsToDollars(item.quota || 0)
+            const tokens = item.tokens || 0
+            const quota = item.quota || 0
+            const hasQuota = quota > 0
+            const displayAmount = quotaUnitsToDollars(quota)
             const tokensPerUnit = displayAmount > 0 ? tokens / displayAmount : 0
+            const share = totalQuota > 0 ? (quota / totalQuota) * 100 : 0
+            const name = displayName(item.name, t)
             return (
               <TableRow
                 key={item.name}
                 className='hover:bg-muted/30 border-b border-border/30 transition-colors'
               >
-                <TableCell className='max-w-0 truncate px-2 py-1.5 align-middle font-medium'>
-                  {displayName(item.name, t)}
+                <TableCell
+                  title={name}
+                  className='max-w-0 truncate px-2 py-1.5 align-middle font-medium'
+                >
+                  {name}
                 </TableCell>
                 <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
-                  {formatNumber(item.count, props.locale)}
-                </TableCell>
-                <TableCell className='px-2 py-1.5 align-middle text-right tabular-nums'>
-                  {formatTokens(tokens)}
+                  {formatNumber(item.count, locale)}
                 </TableCell>
                 <TableCell
-                  title={`${formatNumber(tokens, props.locale)} / ${formatQuota(item.quota)}`}
+                  title={formatNumber(tokens, locale)}
                   className='px-2 py-1.5 align-middle text-right tabular-nums'
                 >
-                  {formatTokens(tokensPerUnit)}
+                  {formatMetric(tokens, locale)}
                 </TableCell>
-                <TableCell className='px-2 py-1.5 align-middle text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
-                  {formatQuota(item.quota)}
+                {showPerCurrency && (
+                  <TableCell
+                    title={`${formatNumber(tokens, locale)} / ${formatQuota(quota)}`}
+                    className='px-2 py-1.5 align-middle text-right tabular-nums'
+                  >
+                    {formatMetric(tokensPerUnit, locale)}
+                  </TableCell>
+                )}
+                <TableCell className='relative px-2 py-1.5 align-middle text-right'>
+                  <div className='flex items-center justify-end gap-1.5'>
+                    <span className='text-muted-foreground w-12 shrink-0 text-right text-[10px] tabular-nums'>
+                      {hasQuota ? formatShare(share, locale) : '-'}
+                    </span>
+                    <span className='font-semibold tabular-nums text-emerald-600 dark:text-emerald-400'>
+                      {hasQuota ? formatQuota(quota) : '-'}
+                    </span>
+                  </div>
+                  {hasQuota && (
+                    <span
+                      aria-hidden='true'
+                      className='absolute right-0 bottom-0 h-0.5 rounded-l-sm bg-emerald-500/35'
+                      style={{ width: `${Math.min(share, 100)}%` }}
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             )
           })}
+          {hiddenCount > 0 && (
+            <TableRow className='hover:bg-transparent'>
+              <TableCell
+                colSpan={showPerCurrency ? 5 : 4}
+                className='text-muted-foreground h-7 px-2 py-1 align-middle text-[11px]'
+              >
+                {t('+{{count}} more', { count: hiddenCount })}
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </div>
@@ -216,7 +313,8 @@ export function DistributionPanels(props: DistributionPanelsProps) {
   const { t } = useTranslation()
 
   return (
-    <div className='grid gap-3 md:grid-cols-2'>
+    // 五列含百分比与金额，面板宽度不足 600px 会挤压重叠，因此仅在 xl 以上并排。
+    <div className='grid gap-3 xl:grid-cols-2'>
       <BreakdownPanel
         title={t('Model Distribution')}
         icon={Boxes}

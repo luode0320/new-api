@@ -36,13 +36,13 @@ export interface QuotaDataItem {
 /**
  * Usage breakdown item for model / group distribution.
  * Returned by dashboard summary endpoints (/api/data, /api/data/self).
+ * Sourced from quota_data so it stays consistent with the summary cards and charts.
  */
 export interface UsageBreakdownItem {
   name: string
   count: number
   quota: number
-  input_tokens: number
-  output_tokens: number
+  tokens: number
 }
 
 export interface FlowQuotaDataItem {
