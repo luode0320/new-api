@@ -5549,6 +5549,15 @@
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom",
     "Purchase Redemption Code": "Mua mã đổi thưởng",
-    "Buy a redemption code from the embedded shop": ""
+    "Buy a redemption code from the embedded shop": "",
+    "You already have an active subscription": "Bạn đã có một đăng ký đang hoạt động",
+    "Continuing will make the new subscription overwrite your current subscription group.": "Nếu tiếp tục, đăng ký mới sẽ ghi đè nhóm đăng ký hiện tại của bạn.",
+    "Active subscriptions": "Đăng ký đang hoạt động",
+    "This purchase": "Lần mua này",
+    "Subscription group": "Nhóm đăng ký",
+    "After overwrite": "Sau khi ghi đè",
+    "After overwriting, your API keys using the \"{{group}}\" group will stop working immediately.": "Sau khi ghi đè, các khóa API sử dụng nhóm \"{{group}}\" sẽ ngừng hoạt động ngay lập tức.",
+    "Slide to confirm overwrite": "Trượt để xác nhận ghi đè",
+    "Slide to continue": "Trượt để tiếp tục"
   }
 }

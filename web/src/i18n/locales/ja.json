@@ -5549,6 +5549,15 @@
     "Zhipu V4": "Zhipu V 4",
     "Zoom": "ズーム",
     "Purchase Redemption Code": "引き換えコードを購入",
-    "Buy a redemption code from the embedded shop": ""
+    "Buy a redemption code from the embedded shop": "",
+    "You already have an active subscription": "アクティブなサブスクリプションが既にあります",
+    "Continuing will make the new subscription overwrite your current subscription group.": "続行すると、新しいサブスクリプションが現在のサブスクリプショングループを上書きします。",
+    "Active subscriptions": "アクティブなサブスクリプション",
+    "This purchase": "今回の購入",
+    "Subscription group": "サブスクリプショングループ",
+    "After overwrite": "上書き後",
+    "After overwriting, your API keys using the \"{{group}}\" group will stop working immediately.": "上書き後、「{{group}}」グループを使用している API キーは即座に使用できなくなります。",
+    "Slide to confirm overwrite": "スライドして上書きを確認",
+    "Slide to continue": "スライドして続行"
   }
 }

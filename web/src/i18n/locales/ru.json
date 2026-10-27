@@ -5549,6 +5549,15 @@
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom",
     "Purchase Redemption Code": "Купить код активации",
-    "Buy a redemption code from the embedded shop": ""
+    "Buy a redemption code from the embedded shop": "",
+    "You already have an active subscription": "У вас уже есть активная подписка",
+    "Continuing will make the new subscription overwrite your current subscription group.": "При продолжении новая подписка заменит текущую группу подписки.",
+    "Active subscriptions": "Активные подписки",
+    "This purchase": "Эта покупка",
+    "Subscription group": "Группа подписки",
+    "After overwrite": "После замены",
+    "After overwriting, your API keys using the \"{{group}}\" group will stop working immediately.": "После замены ваши API-ключи, использующие группу «{{group}}», немедленно перестанут работать.",
+    "Slide to confirm overwrite": "Сдвиньте для подтверждения замены",
+    "Slide to continue": "Сдвиньте для продолжения"
   }
 }

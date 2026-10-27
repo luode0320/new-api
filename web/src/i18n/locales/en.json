@@ -5552,6 +5552,15 @@
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom",
     "Purchase Redemption Code": "Purchase Redemption Code",
-    "Buy a redemption code from the embedded shop": ""
+    "Buy a redemption code from the embedded shop": "",
+    "You already have an active subscription": "You already have an active subscription",
+    "Continuing will make the new subscription overwrite your current subscription group.": "Continuing will make the new subscription overwrite your current subscription group.",
+    "Active subscriptions": "Active subscriptions",
+    "This purchase": "This purchase",
+    "Subscription group": "Subscription group",
+    "After overwrite": "After overwrite",
+    "After overwriting, your API keys using the \"{{group}}\" group will stop working immediately.": "After overwriting, your API keys using the \"{{group}}\" group will stop working immediately.",
+    "Slide to confirm overwrite": "Slide to confirm overwrite",
+    "Slide to continue": "Slide to continue"
   }
 }

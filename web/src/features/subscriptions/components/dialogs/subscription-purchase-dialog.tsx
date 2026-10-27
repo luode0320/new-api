@@ -46,7 +46,8 @@ import {
   paySubscriptionBalance,
 } from '../../api'
 import { formatDuration, formatResetPeriod } from '../../lib'
-import type { PlanRecord } from '../../types'
+import type { PlanRecord, UserSubscriptionRecord } from '../../types'
+import { SubscriptionOverwriteConfirmDialog } from './subscription-overwrite-confirm-dialog'
 
 interface PaymentMethod {
   type: string
@@ -65,6 +66,8 @@ interface Props {
   purchaseLimit?: number
   purchaseCount?: number
   userQuota?: number
+  activeSubscriptions?: UserSubscriptionRecord[]
+  planTitleMap?: Map<number, string>
   onPurchaseSuccess?: () => void | Promise<void>
 }
 
@@ -73,6 +76,9 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const { currency } = useSystemConfig()
   const [paying, setPaying] = useState(false)
   const [selectedEpayMethod, setSelectedEpayMethod] = useState('')
+  // 待执行的支付动作，确认覆盖分组后才会真正触发
+  const [pendingPay, setPendingPay] = useState<(() => void) | null>(null)
+  const [overwriteOpen, setOverwriteOpen] = useState(false)
 
   useEffect(() => {
     if (props.open && props.epayMethods && props.epayMethods.length > 0) {
@@ -255,21 +261,45 @@ export function SubscriptionPurchaseDialog(props: Props) {
     }
   }
 
+  // 支付前置闸门：已有生效订阅时先让用户确认分组覆盖，再执行真实支付。
+  // 所有支付入口都必须经过这里，避免某个渠道绕过覆盖提示。
+  const guardPay = (run: () => void) => {
+    if ((props.activeSubscriptions || []).length === 0) {
+      run()
+      return
+    }
+    setPendingPay(() => run)
+    setOverwriteOpen(true)
+  }
+
+  const handleOverwriteConfirm = () => {
+    const run = pendingPay
+    setPendingPay(null)
+    setOverwriteOpen(false)
+    run?.()
+  }
+
   return (
-    <Dialog
-      open={props.open}
-      onOpenChange={props.onOpenChange}
-      title={
-        <>
-          <Crown className='h-5 w-5' />
-          {t('Purchase Subscription')}
-        </>
-      }
-      contentClassName='max-sm:w-[calc(100vw-1.5rem)] sm:max-w-md'
-      titleClassName='flex items-center gap-2'
-      contentHeight='auto'
-      bodyClassName='space-y-4'
-    >
+    <>
+      <Dialog
+        open={props.open}
+        onOpenChange={(open) => {
+          // 覆盖确认框与本弹窗是同级渲染，其内部点击会被本弹窗误判为
+          // “点击外部”而触发关闭。确认框打开期间由它独占关闭控制权。
+          if (overwriteOpen) return
+          props.onOpenChange(open)
+        }}
+        title={
+          <>
+            <Crown className='h-5 w-5' />
+            {t('Purchase Subscription')}
+          </>
+        }
+        contentClassName='max-sm:w-[calc(100vw-1.5rem)] sm:max-w-md'
+        titleClassName='flex items-center gap-2'
+        contentHeight='auto'
+        bodyClassName='space-y-4'
+      >
       <div className='space-y-3 sm:space-y-4'>
         <div className='bg-muted/50 space-y-2.5 rounded-lg border p-3 sm:space-y-3 sm:p-4'>
           <div className='flex justify-between'>
@@ -354,7 +384,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
           )}
           <Button
             variant='outline'
-            onClick={handlePayBalance}
+            onClick={() => guardPay(handlePayBalance)}
             disabled={
               paying || limitReached || !allowBalancePay || insufficientBalance
             }
@@ -374,7 +404,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
                   <Button
                     variant='outline'
                     className='flex-1'
-                    onClick={handlePayStripe}
+                    onClick={() => guardPay(handlePayStripe)}
                     disabled={paying || limitReached}
                   >
                     Stripe
@@ -384,7 +414,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
                   <Button
                     variant='outline'
                     className='flex-1'
-                    onClick={handlePayCreem}
+                    onClick={() => guardPay(handlePayCreem)}
                     disabled={paying || limitReached}
                   >
                     Creem
@@ -394,7 +424,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
                   <Button
                     variant='outline'
                     className='flex-1'
-                    onClick={handlePayWaffoPancake}
+                    onClick={() => guardPay(handlePayWaffoPancake)}
                     disabled={paying || limitReached}
                   >
                     Waffo Pancake
@@ -429,7 +459,7 @@ export function SubscriptionPurchaseDialog(props: Props) {
                   </SelectContent>
                 </Select>
                 <Button
-                  onClick={handlePayEpay}
+                  onClick={() => guardPay(handlePayEpay)}
                   disabled={paying || !selectedEpayMethod || limitReached}
                 >
                   {t('Pay')}
@@ -439,6 +469,19 @@ export function SubscriptionPurchaseDialog(props: Props) {
           </div>
         )}
       </div>
-    </Dialog>
+      </Dialog>
+
+      <SubscriptionOverwriteConfirmDialog
+        open={overwriteOpen}
+        onOpenChange={(open) => {
+          setOverwriteOpen(open)
+          if (!open) setPendingPay(null)
+        }}
+        plan={props.plan}
+        activeSubscriptions={props.activeSubscriptions || []}
+        planTitleMap={props.planTitleMap || new Map()}
+        onConfirm={handleOverwriteConfirm}
+      />
+    </>
   )
 }

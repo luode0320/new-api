@@ -5552,6 +5552,15 @@
     "Zhipu V4": "智谱 V4",
     "Zoom": "缩放",
     "Purchase Redemption Code": "购买兑换码",
-    "Buy a redemption code from the embedded shop": ""
+    "Buy a redemption code from the embedded shop": "",
+    "You already have an active subscription": "你已有生效中的订阅",
+    "Continuing will make the new subscription overwrite your current subscription group.": "继续支付后，新订阅将覆盖当前订阅分组。",
+    "Active subscriptions": "已有生效订阅",
+    "This purchase": "本次购买",
+    "Subscription group": "订阅分组",
+    "After overwrite": "覆盖后",
+    "After overwriting, your API keys using the \"{{group}}\" group will stop working immediately.": "覆盖后，你使用「{{group}}」分组的 API 密钥将立即无法使用。",
+    "Slide to confirm overwrite": "滑动以确认覆盖",
+    "Slide to continue": "滑动以继续"
   }
 }
